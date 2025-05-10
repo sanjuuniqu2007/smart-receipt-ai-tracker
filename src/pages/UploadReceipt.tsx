@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +15,8 @@ import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Upload, Check, Image, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { processReceiptImage } from "@/utils/ocrUtils";
 
 const UploadReceipt = () => {
   const navigate = useNavigate();
@@ -38,6 +39,26 @@ const UploadReceipt = () => {
     dueDate: "",
     category: "Uncategorized",
   });
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Get current user id on component mount
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        setUserId(data.user.id);
+      } else {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to upload receipts",
+          variant: "destructive",
+        });
+        navigate("/auth/login");
+      }
+    };
+    
+    checkUser();
+  }, [navigate, toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -80,47 +101,99 @@ const UploadReceipt = () => {
       });
       return;
     }
+
+    if (!userId) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to upload receipts",
+        variant: "destructive",
+      });
+      navigate("/auth/login");
+      return;
+    }
     
     try {
-      // Demo flow - in a real app, this would connect to Supabase
       setUploadStatus("uploading");
       
-      // Simulate upload delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Upload the image to Supabase storage
+      const timestamp = Date.now();
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `receipt-${timestamp}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+      
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('receipts')
+        .upload(filePath, selectedFile);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL for the uploaded image
+      const { data: { publicUrl } } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(filePath);
       
       setUploadStatus("processing");
       
-      // Simulate OCR processing delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Use OCR to extract data from the receipt if the file is an image
+      let processedData = { ...extractedData };
+
+      try {
+        // Run OCR processing if file is an image
+        if (selectedFile.type.startsWith('image/')) {
+          const ocrData = await processReceiptImage(selectedFile);
+          
+          // Update with OCR data if available, otherwise keep user-entered data
+          processedData = {
+            vendor: ocrData.vendor || extractedData.vendor,
+            date: ocrData.date || extractedData.date,
+            amount: ocrData.amount || extractedData.amount,
+            dueDate: ocrData.dueDate || extractedData.dueDate,
+            category: extractedData.category, // Keep user-selected category
+          };
+          
+          setExtractedData(processedData);
+        }
+      } catch (ocrError) {
+        console.error("OCR processing error:", ocrError);
+        // Continue with user-entered data if OCR fails
+      }
       
-      // Mock extracted data
-      setExtractedData({
-        vendor: "Demo Store",
-        date: new Date().toISOString().split('T')[0],
-        amount: "127.84",
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        category: "Groceries",
-      });
+      // Save to Supabase database
+      const { error: insertError } = await supabase
+        .from('receipts')
+        .insert({
+          user_id: userId,
+          vendor: processedData.vendor,
+          amount: parseFloat(processedData.amount) || 0,
+          date: processedData.date,
+          due_date: processedData.dueDate || null,
+          category: processedData.category,
+          payment_status: 'pending',
+          image_url: publicUrl,
+          notes: ''
+        });
+      
+      if (insertError) throw insertError;
       
       setUploadStatus("success");
       
       toast({
         title: "Receipt processed successfully",
-        description: "The receipt data has been extracted and saved",
+        description: "The receipt data has been extracted, saved and stored in your account",
         variant: "default",
       });
       
-      // In a real app, we would save to Supabase here
-      // Then redirect after a delay
+      // Redirect after a delay
       setTimeout(() => {
         navigate("/dashboard");
       }, 2000);
       
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error processing receipt:", error);
       setUploadStatus("error");
       toast({
         title: "Error processing receipt",
-        description: "There was a problem processing your receipt. Please try again.",
+        description: error.message || "There was a problem processing your receipt. Please try again.",
         variant: "destructive",
       });
     }
@@ -251,7 +324,7 @@ const UploadReceipt = () => {
                   id="vendor"
                   value={extractedData.vendor}
                   onChange={(e) => handleFieldChange("vendor", e.target.value)}
-                  disabled={uploadStatus !== "success"}
+                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
                   placeholder="Vendor name"
                 />
               </div>
@@ -262,7 +335,7 @@ const UploadReceipt = () => {
                   id="amount"
                   value={extractedData.amount}
                   onChange={(e) => handleFieldChange("amount", e.target.value)}
-                  disabled={uploadStatus !== "success"}
+                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
                   placeholder="0.00"
                 />
               </div>
@@ -275,7 +348,7 @@ const UploadReceipt = () => {
                     type="date"
                     value={extractedData.date}
                     onChange={(e) => handleFieldChange("date", e.target.value)}
-                    disabled={uploadStatus !== "success"}
+                    disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
                   />
                 </div>
                 <div>
@@ -285,7 +358,7 @@ const UploadReceipt = () => {
                     type="date"
                     value={extractedData.dueDate}
                     onChange={(e) => handleFieldChange("dueDate", e.target.value)}
-                    disabled={uploadStatus !== "success"}
+                    disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
                   />
                 </div>
               </div>
@@ -295,7 +368,7 @@ const UploadReceipt = () => {
                 <Select
                   value={extractedData.category}
                   onValueChange={(value) => handleFieldChange("category", value)}
-                  disabled={uploadStatus !== "success"}
+                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
                 >
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Select category" />
@@ -327,14 +400,8 @@ const UploadReceipt = () => {
                 </Button>
                 <Button
                   type="button"
-                  disabled={uploadStatus !== "success"}
-                  onClick={() => {
-                    toast({
-                      title: "Receipt saved",
-                      description: "Your receipt has been saved successfully",
-                    });
-                    navigate("/dashboard");
-                  }}
+                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
+                  onClick={handleSubmit}
                 >
                   Save Receipt
                 </Button>
