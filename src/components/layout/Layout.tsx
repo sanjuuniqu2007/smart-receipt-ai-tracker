@@ -1,9 +1,8 @@
 
+import React from "react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { Outlet } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 
 export function Layout() {
   return (
@@ -13,8 +12,6 @@ export function Layout() {
         <Outlet />
       </main>
       <Footer />
-      <Toaster />
-      <Sonner />
     </div>
   );
 }
