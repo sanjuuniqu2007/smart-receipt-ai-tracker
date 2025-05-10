@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,8 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ReceiptText, Filter, Search, Upload, PlusCircle, Calendar, DollarSign } from "lucide-react";
+import { ReceiptText, Search, Upload, PlusCircle, Calendar, DollarSign } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock data for initial UI development
 const mockReceipts = [
