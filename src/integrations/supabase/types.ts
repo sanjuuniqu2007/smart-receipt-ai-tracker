@@ -9,7 +9,104 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          notify_date: string
+          receipt_id: string | null
+          status: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notify_date: string
+          receipt_id?: string | null
+          status?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notify_date?: string
+          receipt_id?: string | null
+          status?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipts: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          image_url: string
+          receipt_date: string | null
+          total_amount: number | null
+          user_id: string | null
+          vendor: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          image_url: string
+          receipt_date?: string | null
+          total_amount?: number | null
+          user_id?: string | null
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          image_url?: string
+          receipt_date?: string | null
+          total_amount?: number | null
+          user_id?: string | null
+          vendor?: string | null
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          notify_by: string[] | null
+          notify_days_before: number | null
+          phone_number: string | null
+          push_token: string | null
+          user_id: string
+        }
+        Insert: {
+          notify_by?: string[] | null
+          notify_days_before?: number | null
+          phone_number?: string | null
+          push_token?: string | null
+          user_id: string
+        }
+        Update: {
+          notify_by?: string[] | null
+          notify_days_before?: number | null
+          phone_number?: string | null
+          push_token?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

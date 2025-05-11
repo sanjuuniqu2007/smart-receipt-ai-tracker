@@ -65,5 +65,82 @@ export interface Database {
         Update: Partial<Omit<Notification, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
+  storage: {
+    Tables: {
+      buckets: {
+        Row: {
+          id: string;
+          name: string;
+          public: boolean;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          public: boolean;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          public?: boolean;
+        };
+      };
+      objects: {
+        Row: {
+          id: string;
+          bucket_id: string;
+          name: string;
+          owner: string | null;
+          created_at: string;
+          updated_at: string | null;
+          last_accessed_at: string | null;
+          metadata: any | null;
+        };
+        Insert: {
+          id?: string;
+          bucket_id: string;
+          name: string;
+          owner?: string | null;
+          created_at?: string;
+          updated_at?: string | null;
+          last_accessed_at?: string | null;
+          metadata?: any | null;
+        };
+        Update: {
+          id?: string;
+          bucket_id?: string;
+          name?: string;
+          owner?: string | null;
+          created_at?: string;
+          updated_at?: string | null;
+          last_accessed_at?: string | null;
+          metadata?: any | null;
+        };
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 }
