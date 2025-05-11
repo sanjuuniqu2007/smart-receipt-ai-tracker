@@ -165,7 +165,7 @@ const UploadReceipt = () => {
           user_id: userId,
           vendor: processedData.vendor,
           amount: parseFloat(processedData.amount) || 0,
-          date: processedData.date,
+          receipt_date: processedData.date, // Changed from 'date' to 'receipt_date'
           due_date: processedData.dueDate || null,
           category: processedData.category,
           payment_status: 'pending',
