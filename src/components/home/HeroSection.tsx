@@ -22,9 +22,7 @@ export function HeroSection() {
                 </Button>
               </Link>
               <Link to="/auth/login">
-                <Button size="lg" variant="outline" className="border-white text-gray-700 bg-slate-50">
-                  Sign In
-                </Button>
+                
               </Link>
             </div>
           </div>
