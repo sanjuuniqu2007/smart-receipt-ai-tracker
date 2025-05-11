@@ -50,10 +50,13 @@ export type Database = {
       receipts: {
         Row: {
           amount: number | null
+          category: string | null
           created_at: string | null
           due_date: string | null
           id: string
           image_url: string
+          notes: string | null
+          payment_status: string | null
           receipt_date: string | null
           total_amount: number | null
           user_id: string | null
@@ -61,10 +64,13 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          category?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: string
           image_url: string
+          notes?: string | null
+          payment_status?: string | null
           receipt_date?: string | null
           total_amount?: number | null
           user_id?: string | null
@@ -72,10 +78,13 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          category?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: string
           image_url?: string
+          notes?: string | null
+          payment_status?: string | null
           receipt_date?: string | null
           total_amount?: number | null
           user_id?: string | null
