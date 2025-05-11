@@ -1,11 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-
 export function CTASection() {
-  return (
-    <section className="hero-gradient text-white py-16">
+  return <section className="hero-gradient text-white py-16">
       <div className="container px-4 md:px-6">
         <div className="text-center space-y-6 max-w-[800px] mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold">
@@ -23,13 +20,12 @@ export function CTASection() {
               </Button>
             </Link>
             <Link to="/dashboard">
-              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10">
+              <Button size="lg" variant="outline" className="border-white text-gray-700 bg-slate-50">
                 Explore Dashboard
               </Button>
             </Link>
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
