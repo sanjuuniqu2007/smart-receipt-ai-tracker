@@ -1,11 +1,49 @@
 
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { Menu, X, ReceiptText } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Menu, X, ReceiptText, User, LogOut } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+      toast.success("Signed out successfully");
+      navigate('/');
+    } catch (error) {
+      toast.error("Failed to sign out");
+      console.error("Sign out error:", error);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -29,12 +67,47 @@ export function Header() {
         </nav>
         
         <div className="ml-auto flex items-center gap-2">
-          <Link to="/auth/login" className="hidden md:block">
-            <Button variant="outline">Sign in</Button>
-          </Link>
-          <Link to="/auth/register" className="hidden md:block">
-            <Button>Sign up</Button>
-          </Link>
+          {user ? (
+            <div className="hidden md:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.user_metadata?.avatar_url} alt="User profile" />
+                      <AvatarFallback>
+                        {user.email?.charAt(0).toUpperCase() || <User className="h-4 w-4" />}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      {user.email && (
+                        <p className="font-medium">{user.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenuItem 
+                    className="cursor-pointer flex items-center gap-2 text-destructive focus:text-destructive"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <>
+              <Link to="/auth/login" className="hidden md:block">
+                <Button variant="outline">Sign in</Button>
+              </Link>
+              <Link to="/auth/register" className="hidden md:block">
+                <Button>Sign up</Button>
+              </Link>
+            </>
+          )}
           
           <Button
             variant="ghost"
@@ -78,12 +151,28 @@ export function Header() {
               Upload Receipt
             </Link>
             <div className="flex flex-col gap-2 mt-4">
-              <Link to="/auth/login" onClick={() => setIsMenuOpen(false)}>
-                <Button variant="outline" className="w-full">Sign in</Button>
-              </Link>
-              <Link to="/auth/register" onClick={() => setIsMenuOpen(false)}>
-                <Button className="w-full">Sign up</Button>
-              </Link>
+              {user ? (
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={() => {
+                    handleSignOut();
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </Button>
+              ) : (
+                <>
+                  <Link to="/auth/login" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="outline" className="w-full">Sign in</Button>
+                  </Link>
+                  <Link to="/auth/register" onClick={() => setIsMenuOpen(false)}>
+                    <Button className="w-full">Sign up</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>
