@@ -67,13 +67,13 @@ const Register = () => {
   };
 
   return (
-    <div className="container flex items-center justify-center min-h-[80vh] py-8">
+    <div className="container flex items-center justify-center min-h-[100vh] py-8">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <ReceiptText className="h-8 w-8 text-primary" />
             <span className="font-bold text-2xl">Smart Receipt Tracker</span>
-          </div>
+          </Link>
         </div>
         
         <Card>
