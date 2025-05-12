@@ -45,6 +45,14 @@ export interface Notification {
   updated_at: string;
 }
 
+export interface UserPreferences {
+  user_id: string;
+  phone_number?: string;
+  notify_days_before: number;
+  notify_by: string[];
+  push_token?: string;
+}
+
 // Database schema
 export interface Database {
   public: {
@@ -63,6 +71,11 @@ export interface Database {
         Row: Notification;
         Insert: Omit<Notification, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Notification, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      user_preferences: {
+        Row: UserPreferences;
+        Insert: UserPreferences;
+        Update: Partial<UserPreferences>;
       };
     };
     Views: {

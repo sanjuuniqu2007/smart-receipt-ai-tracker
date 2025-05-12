@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ScanText, Calendar, BellRing } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -11,7 +12,7 @@ export function HeroSection() {
                 Smart Receipt <span className="text-secondary">Tracker</span>
               </h1>
               <p className="text-lg md:text-xl text-white/80 max-w-[600px]">
-                Simplify your financial record-keeping by scanning, organizing, and managing your receipts in one secure place.
+                Simplify your financial record-keeping by scanning, organizing, and managing your receipts in one secure place. Get notified before important due dates.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -22,8 +23,24 @@ export function HeroSection() {
                 </Button>
               </Link>
               <Link to="/auth/login">
-                
+                <Button size="lg" variant="outline" className="border-white text-white bg-transparent hover:bg-white/10">
+                  Login
+                </Button>
               </Link>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <ScanText className="h-4 w-4" />
+                <span>Easy Receipt Scanning</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>Track Due Dates</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <BellRing className="h-4 w-4" />
+                <span>Due Date Notifications</span>
+              </div>
             </div>
           </div>
           <div className="rounded-lg shadow-lg bg-white/10 backdrop-blur p-4 sm:p-6 relative overflow-hidden">
