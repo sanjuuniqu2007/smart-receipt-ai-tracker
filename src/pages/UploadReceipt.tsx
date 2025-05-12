@@ -13,11 +13,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, Upload, Check, Image, Loader2 } from "lucide-react";
+import { AlertCircle, Upload, Check, Image, Loader2, Calendar } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { processReceiptImage } from "@/utils/ocrUtils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const UploadReceipt = () => {
   const navigate = useNavigate();
@@ -42,6 +50,7 @@ const UploadReceipt = () => {
   });
   const [userId, setUserId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDueDatePrompt, setShowDueDatePrompt] = useState(false);
   
   // Get current user id on component mount
   useEffect(() => {
@@ -91,6 +100,11 @@ const UploadReceipt = () => {
             dueDate: ocrData.dueDate || "",
             category: "Uncategorized", // Default category
           });
+          
+          // Check if due date was extracted, if not prompt user
+          if (!ocrData.dueDate) {
+            setShowDueDatePrompt(true);
+          }
           
           toast({
             title: "Data extracted",
@@ -212,6 +226,16 @@ const UploadReceipt = () => {
   const handleSaveClick = (e: React.MouseEvent) => {
     e.preventDefault();
     handleSubmit(e);
+  };
+  
+  const handleDueDateSubmit = () => {
+    // Close the dialog
+    setShowDueDatePrompt(false);
+    // The state is already updated via handleFieldChange
+    toast({
+      title: "Due date added",
+      description: "Thank you for providing the due date information."
+    });
   };
 
   return (
@@ -423,6 +447,44 @@ const UploadReceipt = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Due Date Dialog */}
+      <Dialog open={showDueDatePrompt} onOpenChange={setShowDueDatePrompt}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Due Date Information</DialogTitle>
+            <DialogDescription>
+              We couldn't automatically extract a due date from your receipt. If this receipt has a due date or warranty expiration date, please enter it below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center gap-4">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <div className="grid flex-1">
+                <Label htmlFor="manual-due-date" className="mb-1">
+                  Due Date or Warranty Expiry
+                </Label>
+                <Input
+                  id="manual-due-date"
+                  type="date"
+                  value={extractedData.dueDate}
+                  onChange={(e) => handleFieldChange("dueDate", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDueDatePrompt(false)}>
+              Skip
+            </Button>
+            <Button onClick={handleDueDateSubmit}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

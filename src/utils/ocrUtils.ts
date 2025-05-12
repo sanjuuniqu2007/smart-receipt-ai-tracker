@@ -53,7 +53,9 @@ export const parseReceiptText = (text: string): ExtractedReceipt => {
       const dateMatch = dateLine.match(dateRegex);
       if (dateMatch) {
         // Convert to YYYY-MM-DD format
-        const [_, month, day, year] = dateMatch;
+        const month = dateMatch[1];
+        const day = dateMatch[2];
+        const year = dateMatch[3];
         const fullYear = year.length === 2 ? `20${year}` : year;
         result.date = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       }
@@ -93,12 +95,23 @@ export const parseReceiptText = (text: string): ExtractedReceipt => {
         if (dueDateMatch) {
           // Extract month, day, year based on pattern matched
           let month, day, year;
+          
+          // Check which pattern matched and extract accordingly
           if (regex.source.includes('due')) {
-            [_, __, month, day, year] = dueDateMatch;
+            // For patterns like "due date: MM/DD/YYYY"
+            month = dueDateMatch[2];
+            day = dueDateMatch[3];
+            year = dueDateMatch[4];
           } else if (regex.source.includes('expir')) {
-            [_, __, month, day, year] = dueDateMatch;
+            // For patterns like "expiry date: MM/DD/YYYY"
+            month = dueDateMatch[2];
+            day = dueDateMatch[3];
+            year = dueDateMatch[4];
           } else if (regex.source.includes('warranty')) {
-            [_, month, day, year] = dueDateMatch;
+            // For patterns like "warranty until MM/DD/YYYY"
+            month = dueDateMatch[1];
+            day = dueDateMatch[2];
+            year = dueDateMatch[3];
           }
           
           if (month && day && year) {
