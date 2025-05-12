@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const UploadReceipt = () => {
     category: "Uncategorized",
   });
   const [userId, setUserId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Get current user id on component mount
   useEffect(() => {
@@ -60,7 +62,7 @@ const UploadReceipt = () => {
     checkUser();
   }, [navigate, toast]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
@@ -74,15 +76,37 @@ const UploadReceipt = () => {
       };
       fileReader.readAsDataURL(file);
       
-      // Reset form
-      setUploadStatus("idle");
-      setExtractedData({
-        vendor: "",
-        date: "",
-        amount: "",
-        dueDate: "",
-        category: "Uncategorized",
-      });
+      // Reset form status
+      setUploadStatus("processing");
+      
+      try {
+        // Run OCR processing if file is an image
+        if (file.type.startsWith('image/')) {
+          const ocrData = await processReceiptImage(file);
+          
+          setExtractedData({
+            vendor: ocrData.vendor || "",
+            date: ocrData.date || "",
+            amount: ocrData.amount || "",
+            dueDate: ocrData.dueDate || "",
+            category: "Uncategorized", // Default category
+          });
+          
+          toast({
+            title: "Data extracted",
+            description: "Review the extracted information before saving",
+          });
+        }
+      } catch (ocrError) {
+        console.error("OCR processing error:", ocrError);
+        toast({
+          title: "OCR processing error",
+          description: "Failed to extract data automatically. Please fill in the details manually.",
+          variant: "destructive",
+        });
+      } finally {
+        setUploadStatus("idle");
+      }
     }
   };
 
@@ -112,7 +136,18 @@ const UploadReceipt = () => {
       return;
     }
     
+    // Validate required fields
+    if (!extractedData.vendor || !extractedData.date) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in at least the vendor and receipt date",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
+      setIsSubmitting(true);
       setUploadStatus("uploading");
       
       // Upload the image to Supabase storage
@@ -132,42 +167,16 @@ const UploadReceipt = () => {
         .from('receipts')
         .getPublicUrl(filePath);
       
-      setUploadStatus("processing");
-      
-      // Use OCR to extract data from the receipt if the file is an image
-      let processedData = { ...extractedData };
-
-      try {
-        // Run OCR processing if file is an image
-        if (selectedFile.type.startsWith('image/')) {
-          const ocrData = await processReceiptImage(selectedFile);
-          
-          // Update with OCR data if available, otherwise keep user-entered data
-          processedData = {
-            vendor: ocrData.vendor || extractedData.vendor,
-            date: ocrData.date || extractedData.date,
-            amount: ocrData.amount || extractedData.amount,
-            dueDate: ocrData.dueDate || extractedData.dueDate,
-            category: extractedData.category, // Keep user-selected category
-          };
-          
-          setExtractedData(processedData);
-        }
-      } catch (ocrError) {
-        console.error("OCR processing error:", ocrError);
-        // Continue with user-entered data if OCR fails
-      }
-      
       // Save to Supabase database
       const { error: insertError } = await supabase
         .from('receipts')
         .insert({
           user_id: userId,
-          vendor: processedData.vendor,
-          amount: parseFloat(processedData.amount) || 0,
-          receipt_date: processedData.date, // Changed from 'date' to 'receipt_date'
-          due_date: processedData.dueDate || null,
-          category: processedData.category,
+          vendor: extractedData.vendor,
+          amount: parseFloat(extractedData.amount) || 0,
+          receipt_date: extractedData.date,
+          due_date: extractedData.dueDate || null,
+          category: extractedData.category,
           payment_status: 'pending',
           image_url: publicUrl,
           notes: ''
@@ -178,25 +187,31 @@ const UploadReceipt = () => {
       setUploadStatus("success");
       
       toast({
-        title: "Receipt processed successfully",
-        description: "The receipt data has been extracted, saved and stored in your account",
-        variant: "default",
+        title: "Receipt saved successfully",
+        description: "The receipt data has been saved to your account",
       });
       
       // Redirect after a delay
       setTimeout(() => {
         navigate("/dashboard");
-      }, 2000);
+      }, 1500);
       
     } catch (error: any) {
       console.error("Error processing receipt:", error);
       setUploadStatus("error");
       toast({
-        title: "Error processing receipt",
-        description: error.message || "There was a problem processing your receipt. Please try again.",
+        title: "Error saving receipt",
+        description: error.message || "There was a problem saving your receipt. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleSubmit(e);
   };
 
   return (
@@ -219,7 +234,7 @@ const UploadReceipt = () => {
                   accept="image/*"
                   className="hidden"
                   onChange={handleFileChange}
-                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
+                  disabled={isSubmitting}
                 />
                 
                 {!preview ? (
@@ -263,16 +278,22 @@ const UploadReceipt = () => {
                 </Alert>
               )}
 
-              {(uploadStatus === "uploading" || uploadStatus === "processing") && (
+              {uploadStatus === "uploading" && (
                 <div className="flex flex-col items-center justify-center gap-2 p-4">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="font-medium">
-                    {uploadStatus === "uploading" ? "Uploading receipt..." : "Processing receipt..."}
-                  </p>
+                  <p className="font-medium">Uploading receipt...</p>
                   <p className="text-sm text-muted-foreground">
-                    {uploadStatus === "uploading"
-                      ? "Please wait while we upload your receipt."
-                      : "Extracting information from your receipt using OCR..."}
+                    Please wait while we save your receipt.
+                  </p>
+                </div>
+              )}
+
+              {uploadStatus === "processing" && (
+                <div className="flex flex-col items-center justify-center gap-2 p-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="font-medium">Processing receipt...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Extracting information from your receipt using OCR...
                   </p>
                 </div>
               )}
@@ -282,29 +303,9 @@ const UploadReceipt = () => {
                   <Check className="h-4 w-4 text-green-600" />
                   <AlertTitle className="text-green-600">Success</AlertTitle>
                   <AlertDescription className="text-green-700">
-                    Receipt data has been successfully extracted and saved.
+                    Receipt data has been successfully saved. Redirecting to dashboard...
                   </AlertDescription>
                 </Alert>
-              )}
-              
-              {(uploadStatus === "idle" || uploadStatus === "success") && (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!selectedFile || uploadStatus === "success"}
-                  className="w-full"
-                >
-                  {uploadStatus === "success" ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Processed Successfully
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Process Receipt
-                    </>
-                  )}
-                </Button>
               )}
             </div>
           </CardContent>
@@ -314,41 +315,44 @@ const UploadReceipt = () => {
           <CardContent className="p-6">
             <h2 className="text-xl font-semibold mb-4">Receipt Information</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Review and edit the extracted information from your receipt before saving.
+              {selectedFile ? "Review and edit the extracted information before saving." : "Upload a receipt image or enter details manually."}
             </p>
 
             <form className="space-y-4">
               <div>
-                <Label htmlFor="vendor">Vendor/Merchant</Label>
+                <Label htmlFor="vendor">Vendor/Merchant <span className="text-red-500">*</span></Label>
                 <Input
                   id="vendor"
                   value={extractedData.vendor}
                   onChange={(e) => handleFieldChange("vendor", e.target.value)}
-                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
+                  disabled={isSubmitting}
                   placeholder="Vendor name"
+                  required
                 />
               </div>
               
               <div>
-                <Label htmlFor="amount">Amount</Label>
+                <Label htmlFor="amount">Amount <span className="text-red-500">*</span></Label>
                 <Input
                   id="amount"
                   value={extractedData.amount}
                   onChange={(e) => handleFieldChange("amount", e.target.value)}
-                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
+                  disabled={isSubmitting}
                   placeholder="0.00"
+                  required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="date">Receipt Date</Label>
+                  <Label htmlFor="date">Receipt Date <span className="text-red-500">*</span></Label>
                   <Input
                     id="date"
                     type="date"
                     value={extractedData.date}
                     onChange={(e) => handleFieldChange("date", e.target.value)}
-                    disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
+                    disabled={isSubmitting}
+                    required
                   />
                 </div>
                 <div>
@@ -358,7 +362,8 @@ const UploadReceipt = () => {
                     type="date"
                     value={extractedData.dueDate}
                     onChange={(e) => handleFieldChange("dueDate", e.target.value)}
-                    disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
+                    disabled={isSubmitting}
+                    placeholder="Enter due date manually"
                   />
                 </div>
               </div>
@@ -368,7 +373,7 @@ const UploadReceipt = () => {
                 <Select
                   value={extractedData.category}
                   onValueChange={(value) => handleFieldChange("category", value)}
-                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
+                  disabled={isSubmitting}
                 >
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Select category" />
@@ -395,15 +400,23 @@ const UploadReceipt = () => {
                   type="button"
                   variant="outline"
                   onClick={() => navigate("/dashboard")}
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="button"
-                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
-                  onClick={handleSubmit}
+                  onClick={handleSaveClick}
+                  disabled={isSubmitting || uploadStatus === "uploading" || uploadStatus === "success"}
                 >
-                  Save Receipt
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>Save Receipt</>
+                  )}
                 </Button>
               </div>
             </form>

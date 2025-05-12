@@ -20,7 +20,8 @@ import {
   Calendar, 
   DollarSign,
   Bell,
-  AlertTriangle 
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,65 +29,49 @@ import { NotificationSettings } from "@/components/notifications/NotificationSet
 import { UpcomingDueReceipts } from "@/components/notifications/UpcomingDueReceipts";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
-// Mock data for initial UI development
-const mockReceipts = [
-  {
-    id: "r1",
-    vendor: "Walmart",
-    date: "2023-05-10",
-    amount: 127.84,
-    dueDate: "2023-06-10",
-    category: "Groceries",
-    imageUrl: "/placeholder.svg",
-  },
-  {
-    id: "r2",
-    vendor: "Amazon",
-    date: "2023-05-15",
-    amount: 79.99,
-    category: "Electronics",
-    imageUrl: "/placeholder.svg",
-  },
-  {
-    id: "r3",
-    vendor: "Home Depot",
-    date: "2023-05-18",
-    amount: 245.67,
-    dueDate: "2023-06-18",
-    category: "Home Improvement",
-    imageUrl: "/placeholder.svg",
-  },
-  {
-    id: "r4",
-    vendor: "Costco",
-    date: "2023-05-22",
-    amount: 312.45,
-    category: "Groceries",
-    imageUrl: "/placeholder.svg",
-  },
-];
+// Define Receipt interface for type safety
+interface Receipt {
+  id: string;
+  vendor: string;
+  receipt_date: string;
+  amount: number;
+  due_date?: string | null;
+  category: string;
+  image_url: string;
+  payment_status: string;
+}
 
 const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [filterCategory, setFilterCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
-  const [receipts, setReceipts] = useState(mockReceipts);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [upcomingDueCount, setUpcomingDueCount] = useState(0);
   const [showNotificationAlert, setShowNotificationAlert] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // In a real app, we would fetch receipts from Supabase
-    // This is just mock data for now
     const fetchReceipts = async () => {
       try {
+        setIsLoading(true);
         const { data: userData } = await supabase.auth.getSession();
+        
         if (userData?.session?.user) {
-          // Would fetch real data here
-          const dueReceipts = mockReceipts.filter(r => r.dueDate);
-          setReceipts(mockReceipts);
-          setUpcomingDueCount(dueReceipts.length);
+          // Fetch receipts from Supabase
+          const { data, error } = await supabase
+            .from('receipts')
+            .select('*')
+            .order('receipt_date', { ascending: false });
+          
+          if (error) throw error;
+          
+          if (data) {
+            setReceipts(data as Receipt[]);
+            const dueReceipts = data.filter(r => r.due_date);
+            setUpcomingDueCount(dueReceipts.length);
+          }
           
           // Check if notification settings exist
           const { data: preferences } = await supabase
@@ -105,6 +90,8 @@ const Dashboard = () => {
           title: "Error",
           description: "Failed to load receipts. Please try again later."
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -122,7 +109,7 @@ const Dashboard = () => {
       return false;
     }
     // Filter by tab
-    if (activeTab === "upcoming" && !receipt.dueDate) {
+    if (activeTab === "upcoming" && !receipt.due_date) {
       return false;
     }
     return true;
@@ -133,9 +120,12 @@ const Dashboard = () => {
     } else if (sortBy === "vendor") {
       return a.vendor.localeCompare(b.vendor);
     } else {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      return new Date(b.receipt_date).getTime() - new Date(a.receipt_date).getTime();
     }
   });
+
+  // Calculate total amount of filtered receipts
+  const totalAmount = filteredReceipts.reduce((sum, receipt) => sum + (receipt.amount || 0), 0);
 
   return (
     <div className="container px-4 py-8">
@@ -214,7 +204,7 @@ const Dashboard = () => {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
               <p className="text-3xl font-bold">
-                ${receipts.reduce((sum, receipt) => sum + receipt.amount, 0).toFixed(2)}
+                ${totalAmount.toFixed(2)}
               </p>
             </div>
           </CardContent>
@@ -263,8 +253,15 @@ const Dashboard = () => {
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 <SelectItem value="Groceries">Groceries</SelectItem>
+                <SelectItem value="Utilities">Utilities</SelectItem>
+                <SelectItem value="Dining">Dining</SelectItem>
+                <SelectItem value="Entertainment">Entertainment</SelectItem>
+                <SelectItem value="Travel">Travel</SelectItem>
                 <SelectItem value="Electronics">Electronics</SelectItem>
                 <SelectItem value="Home Improvement">Home Improvement</SelectItem>
+                <SelectItem value="Medical">Medical</SelectItem>
+                <SelectItem value="Clothing">Clothing</SelectItem>
+                <SelectItem value="Uncategorized">Uncategorized</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -277,13 +274,18 @@ const Dashboard = () => {
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
           <TabsContent value="all" className="mt-6">
-            {filteredReceipts.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading receipts...</span>
+              </div>
+            ) : filteredReceipts.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredReceipts.map((receipt) => (
                   <Card key={receipt.id} className="overflow-hidden hover:shadow-md transition-shadow">
                     <div className="aspect-video bg-muted relative">
                       <img
-                        src={receipt.imageUrl}
+                        src={receipt.image_url || "/placeholder.svg"}
                         alt={`Receipt from ${receipt.vendor}`}
                         className="object-cover w-full h-full"
                       />
@@ -299,7 +301,7 @@ const Dashboard = () => {
                         <div className="flex justify-between">
                           <span>Date:</span>
                           <span className="font-medium text-foreground">
-                            {new Date(receipt.date).toLocaleDateString()}
+                            {new Date(receipt.receipt_date).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -308,11 +310,11 @@ const Dashboard = () => {
                             ${receipt.amount.toFixed(2)}
                           </span>
                         </div>
-                        {receipt.dueDate && (
+                        {receipt.due_date && (
                           <div className="flex justify-between">
                             <span>Due Date:</span>
                             <span className="font-medium text-foreground">
-                              {new Date(receipt.dueDate).toLocaleDateString()}
+                              {new Date(receipt.due_date).toLocaleDateString()}
                             </span>
                           </div>
                         )}
@@ -341,7 +343,7 @@ const Dashboard = () => {
             )}
           </TabsContent>
           <TabsContent value="upcoming" className="mt-6">
-            <UpcomingDueReceipts receipts={filteredReceipts.filter(r => r.dueDate)} />
+            <UpcomingDueReceipts receipts={filteredReceipts.filter(r => r.due_date)} />
           </TabsContent>
           <TabsContent value="notifications" className="mt-6">
             <div className="max-w-3xl mx-auto bg-card shadow rounded-lg p-6">

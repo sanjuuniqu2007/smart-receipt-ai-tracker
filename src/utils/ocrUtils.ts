@@ -59,30 +59,59 @@ export const parseReceiptText = (text: string): ExtractedReceipt => {
       }
     }
     
-    // Look for total amount (simple approach)
-    const totalRegex = /total[\s:]*[$]?(\d+\.\d{2})/i;
-    const amountLine = lines.find(line => totalRegex.test(line));
-    if (amountLine) {
-      const amountMatch = amountLine.match(totalRegex);
-      if (amountMatch && amountMatch[1]) {
-        result.amount = amountMatch[1];
+    // Look for amount patterns (enhanced approach)
+    const amountRegexPatterns = [
+      /total[\s:]*[$]?(\d+\.\d{2})/i,
+      /amount[\s:]*[$]?(\d+\.\d{2})/i,
+      /subtotal[\s:]*[$]?(\d+\.\d{2})/i,
+      /[$](\d+\.\d{2})/,
+      /(\d+\.\d{2})/
+    ];
+    
+    for (const regex of amountRegexPatterns) {
+      const amountLine = lines.find(line => regex.test(line));
+      if (amountLine) {
+        const amountMatch = amountLine.match(regex);
+        if (amountMatch && amountMatch[1]) {
+          result.amount = amountMatch[1];
+          break;
+        }
       }
     }
     
-    // Look for due date if exists
-    const dueDateRegex = /due[\s:]*(date)?[\s:]*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i;
-    const dueDateLine = lines.find(line => dueDateRegex.test(line));
-    if (dueDateLine) {
-      const dueDateMatch = dueDateLine.match(dueDateRegex);
-      if (dueDateMatch) {
-        // Convert to YYYY-MM-DD format
-        const [_, __, month, day, year] = dueDateMatch;
-        const fullYear = year.length === 2 ? `20${year}` : year;
-        result.dueDate = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    // Look for due date or warranty expiry if exists
+    const dueDateRegexPatterns = [
+      /due[\s:]*(date)?[\s:]*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i,
+      /expir[ey][\s:]*(date)?[\s:]*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i,
+      /warranty[\s\w]*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i
+    ];
+    
+    for (const regex of dueDateRegexPatterns) {
+      const dueDateLine = lines.find(line => regex.test(line));
+      if (dueDateLine) {
+        const dueDateMatch = dueDateLine.match(regex);
+        if (dueDateMatch) {
+          // Extract month, day, year based on pattern matched
+          let month, day, year;
+          if (regex.source.includes('due')) {
+            [_, __, month, day, year] = dueDateMatch;
+          } else if (regex.source.includes('expir')) {
+            [_, __, month, day, year] = dueDateMatch;
+          } else if (regex.source.includes('warranty')) {
+            [_, month, day, year] = dueDateMatch;
+          }
+          
+          if (month && day && year) {
+            const fullYear = year.length === 2 ? `20${year}` : year;
+            result.dueDate = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            break;
+          }
+        }
       }
     }
   }
   
+  console.log('Parsed Receipt Data:', result);
   return result;
 };
 
@@ -97,7 +126,6 @@ export const processReceiptImage = async (imageFile: File): Promise<ExtractedRec
     
     // Parse text to find receipt data
     const receiptData = parseReceiptText(extractedText);
-    console.log('Parsed Receipt Data:', receiptData);
     
     return receiptData;
   } catch (error) {
