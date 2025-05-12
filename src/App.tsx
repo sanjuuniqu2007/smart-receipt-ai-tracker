@@ -19,27 +19,25 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Index />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="upload" element={<UploadReceipt />} />
-                <Route path="auth/login" element={<Login />} />
-                <Route path="auth/register" element={<Register />} />
-                <Route path="auth/forgot-password" element={<ForgotPassword />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Index />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="upload" element={<UploadReceipt />} />
+              <Route path="auth/login" element={<Login />} />
+              <Route path="auth/register" element={<Register />} />
+              <Route path="auth/forgot-password" element={<ForgotPassword />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
         </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 };
 
