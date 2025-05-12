@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ScanText, Calendar, BellRing } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -23,9 +22,7 @@ export function HeroSection() {
                 </Button>
               </Link>
               <Link to="/auth/login">
-                <Button size="lg" variant="outline" className="border-white text-white bg-transparent hover:bg-white/10">
-                  Login
-                </Button>
+                
               </Link>
             </div>
             <div className="flex flex-wrap gap-4 text-sm">
