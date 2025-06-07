@@ -28,7 +28,7 @@ export function HeroSection() {
             <div className="flex flex-wrap gap-4 text-sm text-slate-700">
               <div className="flex items-center gap-2">
                 <ScanText className="h-4 w-4" />
-                <span>Easy Receipt Scanning</span>
+                <span className="text-slate-50">Easy Receipt Scanning</span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
