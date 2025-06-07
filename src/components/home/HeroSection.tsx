@@ -32,7 +32,7 @@ export function HeroSection() {
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>Track Due Dates</span>
+                <span className="text-slate-50">Track Due Dates</span>
               </div>
               <div className="flex items-center gap-2">
                 <BellRing className="h-4 w-4" />
