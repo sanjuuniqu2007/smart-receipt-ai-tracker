@@ -1,11 +1,13 @@
+
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Menu, X, ReceiptText, User, LogOut, NotificationSettings } from "lucide-react";
+import { Menu, X, ReceiptText, User, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -186,7 +188,7 @@ export function Header() {
                     <Button variant="outline" className="w-full">Sign in</Button>
                   </Link>
                   <Link to="/auth/register" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full">Sign up</Button>
+                    <Button variant="outline" className="w-full">Sign up</Button>
                   </Link>
                 </>
               )}
