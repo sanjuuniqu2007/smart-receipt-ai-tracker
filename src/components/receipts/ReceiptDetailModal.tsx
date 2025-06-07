@@ -2,18 +2,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, DollarSign, FileText, MapPin } from "lucide-react";
-
-interface Receipt {
-  id: string;
-  vendor: string;
-  receipt_date: string;
-  amount: number;
-  due_date?: string | null;
-  category: string;
-  image_url: string;
-  payment_status: string;
-  notes?: string;
-}
+import { Receipt } from "@/types/database.types";
 
 interface ReceiptDetailModalProps {
   receipt: Receipt | null;

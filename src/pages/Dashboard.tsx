@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,19 +30,7 @@ import { NotificationSettings } from "@/components/notifications/NotificationSet
 import { UpcomingDueReceipts } from "@/components/notifications/UpcomingDueReceipts";
 import { ReceiptDetailModal } from "@/components/receipts/ReceiptDetailModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-
-// Define Receipt interface for type safety
-interface Receipt {
-  id: string;
-  vendor: string;
-  receipt_date: string;
-  amount: number;
-  due_date?: string | null;
-  category: string;
-  image_url: string;
-  payment_status: string;
-  notes?: string;
-}
+import { Receipt } from "@/types/database.types";
 
 const Dashboard = () => {
   const [search, setSearch] = useState("");

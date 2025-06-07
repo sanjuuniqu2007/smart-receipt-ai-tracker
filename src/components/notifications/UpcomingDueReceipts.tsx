@@ -7,16 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-
-interface Receipt {
-  id: string;
-  vendor: string;
-  date: string;
-  amount: number;
-  dueDate?: string;
-  category: string;
-  imageUrl: string;
-}
+import { Receipt } from "@/types/database.types";
 
 interface UpcomingDueReceiptsProps {
   receipts: Receipt[];
@@ -41,10 +32,10 @@ function getBadgeVariant(days: number): "default" | "secondary" | "destructive" 
 export function UpcomingDueReceipts({ receipts }: UpcomingDueReceiptsProps) {
   // Sort by due date (closest first)
   const sortedReceipts = [...receipts]
-    .filter(r => r.dueDate)
+    .filter(r => r.due_date)
     .sort((a, b) => {
-      const dateA = new Date(a.dueDate!).getTime();
-      const dateB = new Date(b.dueDate!).getTime();
+      const dateA = new Date(a.due_date!).getTime();
+      const dateB = new Date(b.due_date!).getTime();
       return dateA - dateB;
     });
     
@@ -54,18 +45,18 @@ export function UpcomingDueReceipts({ receipts }: UpcomingDueReceiptsProps) {
     
   // Group receipts by urgency
   const overdueReceipts = sortedReceipts.filter(
-    r => new Date(r.dueDate!) < today
+    r => new Date(r.due_date!) < today
   );
   
   const nextWeekReceipts = sortedReceipts.filter(
     r => {
-      const dueDate = new Date(r.dueDate!);
+      const dueDate = new Date(r.due_date!);
       return dueDate >= today && dueDate <= next7Days;
     }
   );
   
   const laterReceipts = sortedReceipts.filter(
-    r => new Date(r.dueDate!) > next7Days
+    r => new Date(r.due_date!) > next7Days
   );
 
   if (sortedReceipts.length === 0) {
@@ -111,7 +102,7 @@ export function UpcomingDueReceipts({ receipts }: UpcomingDueReceiptsProps) {
         </TableHeader>
         <TableBody>
           {sortedReceipts.map((receipt) => {
-            const daysRemaining = getDaysUntilDue(receipt.dueDate!);
+            const daysRemaining = getDaysUntilDue(receipt.due_date!);
             const badgeVariant = getBadgeVariant(daysRemaining);
             
             return (
@@ -119,7 +110,7 @@ export function UpcomingDueReceipts({ receipts }: UpcomingDueReceiptsProps) {
                 <TableCell className="font-medium">{receipt.vendor}</TableCell>
                 <TableCell>{receipt.category}</TableCell>
                 <TableCell>${receipt.amount.toFixed(2)}</TableCell>
-                <TableCell>{new Date(receipt.dueDate!).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(receipt.due_date!).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <Badge variant={badgeVariant}>
                     {daysRemaining < 0 

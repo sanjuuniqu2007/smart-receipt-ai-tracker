@@ -24,8 +24,8 @@ export interface Receipt {
   user_id: string;
   vendor: string;
   amount: number;
-  date: string;
-  due_date?: string;
+  receipt_date: string;
+  due_date?: string | null;
   category: string;
   payment_status: 'paid' | 'pending' | 'overdue';
   notes?: string;
