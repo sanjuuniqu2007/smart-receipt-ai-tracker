@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,7 +22,8 @@ import {
   DollarSign,
   Bell,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Trash2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +56,8 @@ const Dashboard = () => {
   const [showNotificationAlert, setShowNotificationAlert] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedReceiptIds, setSelectedReceiptIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   // Helper function to check if receipt is expired
@@ -142,6 +146,54 @@ const Dashboard = () => {
   const handleViewDetails = (receipt: Receipt) => {
     setSelectedReceipt(receipt);
     setIsDetailModalOpen(true);
+  };
+
+  const handleSelectReceipt = (receiptId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedReceiptIds(prev => [...prev, receiptId]);
+    } else {
+      setSelectedReceiptIds(prev => prev.filter(id => id !== receiptId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedReceiptIds(filteredReceipts.map(receipt => receipt.id));
+    } else {
+      setSelectedReceiptIds([]);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedReceiptIds.length === 0) return;
+
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('receipts')
+        .delete()
+        .in('id', selectedReceiptIds);
+
+      if (error) throw error;
+
+      // Update local state
+      setReceipts(prev => prev.filter(receipt => !selectedReceiptIds.includes(receipt.id)));
+      setSelectedReceiptIds([]);
+      
+      toast({
+        title: "Success",
+        description: `${selectedReceiptIds.length} receipt(s) deleted successfully.`
+      });
+    } catch (error) {
+      console.error("Error deleting receipts:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete receipts. Please try again."
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -284,6 +336,40 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {selectedReceiptIds.length > 0 && (
+          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+            <span className="text-sm font-medium">
+              {selectedReceiptIds.length} receipt(s) selected
+            </span>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={isDeleting}>
+                  {isDeleting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  Delete Selected
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete {selectedReceiptIds.length} receipt(s) from your account.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
+
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList>
             <TabsTrigger value="all">All Receipts</TabsTrigger>
@@ -297,78 +383,96 @@ const Dashboard = () => {
                 <span className="ml-2">Loading receipts...</span>
               </div>
             ) : filteredReceipts.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredReceipts.map((receipt) => {
-                  const isExpired = isReceiptExpired(receipt.due_date);
-                  
-                  return (
-                    <Card 
-                      key={receipt.id} 
-                      className={`overflow-hidden transition-shadow relative ${
-                        isExpired 
-                          ? 'opacity-60 pointer-events-none' 
-                          : 'hover:shadow-md cursor-pointer'
-                      }`}
-                      style={isExpired ? { filter: 'blur(2px)' } : {}}
-                    >
-                      {isExpired && (
-                        <div className="absolute top-4 right-4 z-10">
-                          <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                            Expired
-                          </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedReceiptIds.length === filteredReceipts.length}
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <span className="text-sm text-muted-foreground">Select all</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredReceipts.map((receipt) => {
+                    const isExpired = isReceiptExpired(receipt.due_date);
+                    const isSelected = selectedReceiptIds.includes(receipt.id);
+                    
+                    return (
+                      <Card 
+                        key={receipt.id} 
+                        className={`overflow-hidden transition-shadow relative ${
+                          isExpired 
+                            ? 'opacity-60 pointer-events-none' 
+                            : 'hover:shadow-md cursor-pointer'
+                        } ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                        style={isExpired ? { filter: 'blur(2px)' } : {}}
+                      >
+                        <div className="absolute top-4 left-4 z-10">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) => handleSelectReceipt(receipt.id, checked as boolean)}
+                            className="bg-white/80 backdrop-blur"
+                          />
                         </div>
-                      )}
-                      
-                      <div className="aspect-video bg-muted relative">
-                        <img
-                          src={receipt.image_url || "/placeholder.svg"}
-                          alt={`Receipt from ${receipt.vendor}`}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-xl">{receipt.vendor}</h3>
-                          <div className="bg-primary/10 text-primary text-sm px-2 py-1 rounded">
-                            {receipt.category}
+
+                        {isExpired && (
+                          <div className="absolute top-4 right-4 z-10">
+                            <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                              Expired
+                            </div>
                           </div>
+                        )}
+                        
+                        <div className="aspect-video bg-muted relative">
+                          <img
+                            src={receipt.image_url || "/placeholder.svg"}
+                            alt={`Receipt from ${receipt.vendor}`}
+                            className="object-cover w-full h-full"
+                          />
                         </div>
-                        <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                          <div className="flex justify-between">
-                            <span>Date:</span>
-                            <span className="font-medium text-foreground">
-                              {new Date(receipt.receipt_date).toLocaleDateString()}
-                            </span>
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-semibold text-xl">{receipt.vendor}</h3>
+                            <div className="bg-primary/10 text-primary text-sm px-2 py-1 rounded">
+                              {receipt.category}
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Amount:</span>
-                            <span className="font-medium text-foreground">
-                              ${receipt.amount.toFixed(2)}
-                            </span>
-                          </div>
-                          {receipt.due_date && (
+                          <div className="space-y-2 text-sm text-muted-foreground mb-4">
                             <div className="flex justify-between">
-                              <span>Due Date:</span>
-                              <span className={`font-medium ${isExpired ? 'text-red-600' : 'text-foreground'}`}>
-                                {new Date(receipt.due_date).toLocaleDateString()}
+                              <span>Date:</span>
+                              <span className="font-medium text-foreground">
+                                {new Date(receipt.receipt_date).toLocaleDateString()}
                               </span>
                             </div>
+                            <div className="flex justify-between">
+                              <span>Amount:</span>
+                              <span className="font-medium text-foreground">
+                                ${receipt.amount.toFixed(2)}
+                              </span>
+                            </div>
+                            {receipt.due_date && (
+                              <div className="flex justify-between">
+                                <span>Due Date:</span>
+                                <span className={`font-medium ${isExpired ? 'text-red-600' : 'text-foreground'}`}>
+                                  {new Date(receipt.due_date).toLocaleDateString()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {!isExpired && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => handleViewDetails(receipt)}
+                            >
+                              View Details
+                            </Button>
                           )}
-                        </div>
-                        {!isExpired && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-full"
-                            onClick={() => handleViewDetails(receipt)}
-                          >
-                            View Details
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div className="text-center py-12">
