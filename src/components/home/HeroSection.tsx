@@ -1,11 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ScanText, Calendar, BellRing } from "lucide-react";
 import { Link } from "react-router-dom";
-
 export function HeroSection() {
-  return (
-    <section className="hero-gradient text-white py-16 md:py-24">
+  return <section className="hero-gradient text-white py-16 md:py-24">
       <div className="container px-4 md:px-6">
         <div className="grid gap-8 md:grid-cols-2 md:gap-12 items-center">
           <div className="space-y-8">
@@ -25,12 +22,10 @@ export function HeroSection() {
                 </Button>
               </Link>
               <Link to="/auth/login">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                  Sign In
-                </Button>
+                
               </Link>
             </div>
-            <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex flex-wrap gap-4 text-sm text-slate-700">
               <div className="flex items-center gap-2">
                 <ScanText className="h-4 w-4" />
                 <span>Easy Receipt Scanning</span>
@@ -48,11 +43,7 @@ export function HeroSection() {
           <div className="rounded-lg shadow-lg bg-white/10 backdrop-blur p-4 sm:p-6 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0 pointer-events-none" />
             <div className="relative z-10">
-              <img 
-                src="https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                alt="AI-powered receipt scanning technology with colorful code interface" 
-                className="rounded border border-white/20 shadow-xl w-full h-auto object-cover"
-              />
+              <img src="/placeholder.svg" alt="Receipt Tracker Dashboard" className="rounded border border-white/20 shadow-xl" />
               <div className="mt-4 flex justify-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-white/50" />
                 <div className="w-2 h-2 rounded-full bg-white" />
@@ -62,6 +53,5 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
