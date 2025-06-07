@@ -36,7 +36,7 @@ export function HeroSection() {
               </div>
               <div className="flex items-center gap-2">
                 <BellRing className="h-4 w-4" />
-                <span>Due Date Notifications</span>
+                <span className="text-slate-50">Due Date Notifications</span>
               </div>
             </div>
           </div>
