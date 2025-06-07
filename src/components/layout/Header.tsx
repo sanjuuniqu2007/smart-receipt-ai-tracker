@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Menu, X, ReceiptText, User, LogOut } from "lucide-react";
+import { Menu, X, ReceiptText, User, LogOut, NotificationSettings } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -103,6 +102,10 @@ export function Header() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer flex items-center gap-3 p-3 rounded-lg transition-colors">
+                    <NotificationSettings />
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="cursor-pointer flex items-center gap-3 p-3 text-destructive focus:text-destructive hover:bg-destructive/10 rounded-lg transition-colors" 
                     onClick={handleSignOut}
@@ -163,17 +166,20 @@ export function Header() {
             </Link>
             <div className="flex flex-col gap-2 mt-4">
               {user ? (
-                <Button 
-                  variant="outline" 
-                  className="w-full flex items-center justify-center gap-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50" 
-                  onClick={() => {
-                    handleSignOut();
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </Button>
+                <>
+                  <NotificationSettings />
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center justify-center gap-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50" 
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </Button>
+                </>
               ) : (
                 <>
                   <Link to="/auth/login" onClick={() => setIsMenuOpen(false)}>

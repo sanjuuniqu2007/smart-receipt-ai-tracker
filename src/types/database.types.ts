@@ -45,6 +45,17 @@ export interface Notification {
   updated_at: string;
 }
 
+export interface NotificationHistory {
+  id: string;
+  user_id: string;
+  receipt_id: string;
+  notification_type: 'email' | 'sms';
+  sent_at: string;
+  status: 'sent' | 'failed' | 'pending';
+  content?: any;
+  created_at: string;
+}
+
 export interface UserPreferences {
   user_id: string;
   phone_number?: string;
@@ -71,6 +82,11 @@ export interface Database {
         Row: Notification;
         Insert: Omit<Notification, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Notification, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      notification_history: {
+        Row: NotificationHistory;
+        Insert: Omit<NotificationHistory, 'id' | 'created_at'>;
+        Update: Partial<Omit<NotificationHistory, 'id' | 'created_at'>>;
       };
       user_preferences: {
         Row: UserPreferences;

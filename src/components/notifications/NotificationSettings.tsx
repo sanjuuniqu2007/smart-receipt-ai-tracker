@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
-import { Bell, Mail, Phone, AlertCircle } from "lucide-react";
+import { Bell, Mail, Phone, AlertCircle, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,11 +39,13 @@ interface NotificationFormValues {
   notify_days_before: number;
   notify_by_email: boolean;
   notify_by_sms: boolean;
+  custom_days?: number;
 }
 
 export function NotificationSettings() {
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [showCustomDays, setShowCustomDays] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<NotificationFormValues>({
@@ -52,6 +54,7 @@ export function NotificationSettings() {
       notify_days_before: 7,
       notify_by_email: true,
       notify_by_sms: false,
+      custom_days: undefined,
     },
   });
 
@@ -75,9 +78,13 @@ export function NotificationSettings() {
             }
             
             if (preferences) {
+              const customDays = ![1, 3, 7, 14, 30].includes(preferences.notify_days_before);
+              setShowCustomDays(customDays);
+              
               form.reset({
                 phone_number: preferences.phone_number || "",
-                notify_days_before: preferences.notify_days_before || 7,
+                notify_days_before: customDays ? 0 : preferences.notify_days_before || 7,
+                custom_days: customDays ? preferences.notify_days_before : undefined,
                 notify_by_email: preferences.notify_by.includes('email'),
                 notify_by_sms: preferences.notify_by.includes('sms'),
               });
@@ -113,10 +120,16 @@ export function NotificationSettings() {
       if (values.notify_by_email) notify_by.push('email');
       if (values.notify_by_sms) notify_by.push('sms');
       
+      // Determine the final notify_days_before value
+      let finalNotifyDays = values.notify_days_before;
+      if (values.notify_days_before === 0 && values.custom_days) {
+        finalNotifyDays = values.custom_days;
+      }
+      
       const preferencesData = {
         user_id: session.session.user.id,
         phone_number: values.phone_number,
-        notify_days_before: values.notify_days_before,
+        notify_days_before: finalNotifyDays,
         notify_by: notify_by,
       };
       
@@ -145,19 +158,34 @@ export function NotificationSettings() {
     }
   };
 
+  const handleDaysChange = (value: string) => {
+    const days = parseInt(value);
+    if (days === 0) {
+      setShowCustomDays(true);
+      form.setValue('notify_days_before', 0);
+    } else {
+      setShowCustomDays(false);
+      form.setValue('notify_days_before', days);
+      form.setValue('custom_days', undefined);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" id="notification-settings-button">
-          <Bell className="mr-2 h-4 w-4" />
+        <Button variant="outline" size="sm" className="gap-2">
+          <Settings className="h-4 w-4" />
           Notification Settings
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Notification Preferences</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Preferences
+          </DialogTitle>
           <DialogDescription>
-            Configure how and when you want to receive notifications for upcoming due dates.
+            Configure how and when you want to receive notifications for upcoming receipt expiry dates.
           </DialogDescription>
         </DialogHeader>
         
@@ -168,15 +196,15 @@ export function NotificationSettings() {
               name="notify_days_before"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notify me before due dates</FormLabel>
+                  <FormLabel>Notify me before expiry</FormLabel>
                   <Select 
-                    value={field.value.toString()} 
-                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    value={showCustomDays ? "0" : field.value.toString()} 
+                    onValueChange={handleDaysChange}
                     disabled={isLoading}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select days" />
+                        <SelectValue placeholder="Select timing" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -185,14 +213,43 @@ export function NotificationSettings() {
                       <SelectItem value="7">1 week before</SelectItem>
                       <SelectItem value="14">2 weeks before</SelectItem>
                       <SelectItem value="30">1 month before</SelectItem>
+                      <SelectItem value="0">Custom (specify days)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    You'll receive notifications this many days before a receipt due date.
+                    You'll receive notifications this many days before a receipt expiry date.
                   </FormDescription>
                 </FormItem>
               )}
             />
+            
+            {showCustomDays && (
+              <FormField
+                control={form.control}
+                name="custom_days"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custom notification days</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        min="1"
+                        max="365"
+                        placeholder="Enter number of days" 
+                        {...field}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Enter a custom number of days (1-365) before expiry to receive notifications.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <div className="space-y-4">
               <FormLabel>Notification methods</FormLabel>
@@ -210,12 +267,12 @@ export function NotificationSettings() {
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel className="flex items-center">
-                        <Mail className="mr-2 h-4 w-4" />
-                        Email notifications
+                      <FormLabel className="flex items-center gap-2 cursor-pointer">
+                        <Mail className="h-4 w-4" />
+                        📩 Email notifications
                       </FormLabel>
                       <FormDescription>
-                        Receive notifications via email
+                        Receive detailed email reminders with receipt information
                       </FormDescription>
                     </div>
                   </FormItem>
@@ -235,12 +292,12 @@ export function NotificationSettings() {
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel className="flex items-center">
-                        <Phone className="mr-2 h-4 w-4" />
-                        SMS notifications
+                      <FormLabel className="flex items-center gap-2 cursor-pointer">
+                        <Phone className="h-4 w-4" />
+                        📱 SMS notifications
                       </FormLabel>
                       <FormDescription>
-                        Receive notifications via SMS
+                        Receive quick SMS reminders on your mobile phone
                       </FormDescription>
                     </div>
                   </FormItem>
@@ -253,7 +310,7 @@ export function NotificationSettings() {
                   name="phone_number"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone number</FormLabel>
+                      <FormLabel>Phone number for SMS</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="+1 (555) 123-4567" 
@@ -262,7 +319,7 @@ export function NotificationSettings() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Your phone number for receiving SMS notifications
+                        Your phone number for receiving SMS notifications (include country code)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -272,6 +329,14 @@ export function NotificationSettings() {
             </div>
             
             <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setOpen(false)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? "Saving..." : "Save preferences"}
               </Button>
