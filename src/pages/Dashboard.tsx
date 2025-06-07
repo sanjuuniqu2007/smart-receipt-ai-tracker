@@ -27,6 +27,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { UpcomingDueReceipts } from "@/components/notifications/UpcomingDueReceipts";
+import { ReceiptDetailModal } from "@/components/receipts/ReceiptDetailModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 // Define Receipt interface for type safety
@@ -39,6 +40,7 @@ interface Receipt {
   category: string;
   image_url: string;
   payment_status: string;
+  notes?: string;
 }
 
 const Dashboard = () => {
@@ -50,7 +52,17 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [upcomingDueCount, setUpcomingDueCount] = useState(0);
   const [showNotificationAlert, setShowNotificationAlert] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const { toast } = useToast();
+
+  // Helper function to check if receipt is expired
+  const isReceiptExpired = (dueDate: string | null): boolean => {
+    if (!dueDate) return false;
+    const today = new Date();
+    const due = new Date(dueDate);
+    return today > due;
+  };
 
   useEffect(() => {
     const fetchReceipts = async () => {
@@ -126,6 +138,11 @@ const Dashboard = () => {
 
   // Calculate total amount of filtered receipts
   const totalAmount = filteredReceipts.reduce((sum, receipt) => sum + (receipt.amount || 0), 0);
+
+  const handleViewDetails = (receipt: Receipt) => {
+    setSelectedReceipt(receipt);
+    setIsDetailModalOpen(true);
+  };
 
   return (
     <div className="container px-4 py-8">
@@ -281,50 +298,77 @@ const Dashboard = () => {
               </div>
             ) : filteredReceipts.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredReceipts.map((receipt) => (
-                  <Card key={receipt.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="aspect-video bg-muted relative">
-                      <img
-                        src={receipt.image_url || "/placeholder.svg"}
-                        alt={`Receipt from ${receipt.vendor}`}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold text-xl">{receipt.vendor}</h3>
-                        <div className="bg-primary/10 text-primary text-sm px-2 py-1 rounded">
-                          {receipt.category}
+                {filteredReceipts.map((receipt) => {
+                  const isExpired = isReceiptExpired(receipt.due_date);
+                  
+                  return (
+                    <Card 
+                      key={receipt.id} 
+                      className={`overflow-hidden transition-shadow relative ${
+                        isExpired 
+                          ? 'opacity-60 pointer-events-none' 
+                          : 'hover:shadow-md cursor-pointer'
+                      }`}
+                      style={isExpired ? { filter: 'blur(2px)' } : {}}
+                    >
+                      {isExpired && (
+                        <div className="absolute top-4 right-4 z-10">
+                          <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                            Expired
+                          </div>
                         </div>
+                      )}
+                      
+                      <div className="aspect-video bg-muted relative">
+                        <img
+                          src={receipt.image_url || "/placeholder.svg"}
+                          alt={`Receipt from ${receipt.vendor}`}
+                          className="object-cover w-full h-full"
+                        />
                       </div>
-                      <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                        <div className="flex justify-between">
-                          <span>Date:</span>
-                          <span className="font-medium text-foreground">
-                            {new Date(receipt.receipt_date).toLocaleDateString()}
-                          </span>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold text-xl">{receipt.vendor}</h3>
+                          <div className="bg-primary/10 text-primary text-sm px-2 py-1 rounded">
+                            {receipt.category}
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Amount:</span>
-                          <span className="font-medium text-foreground">
-                            ${receipt.amount.toFixed(2)}
-                          </span>
-                        </div>
-                        {receipt.due_date && (
+                        <div className="space-y-2 text-sm text-muted-foreground mb-4">
                           <div className="flex justify-between">
-                            <span>Due Date:</span>
+                            <span>Date:</span>
                             <span className="font-medium text-foreground">
-                              {new Date(receipt.due_date).toLocaleDateString()}
+                              {new Date(receipt.receipt_date).toLocaleDateString()}
                             </span>
                           </div>
+                          <div className="flex justify-between">
+                            <span>Amount:</span>
+                            <span className="font-medium text-foreground">
+                              ${receipt.amount.toFixed(2)}
+                            </span>
+                          </div>
+                          {receipt.due_date && (
+                            <div className="flex justify-between">
+                              <span>Due Date:</span>
+                              <span className={`font-medium ${isExpired ? 'text-red-600' : 'text-foreground'}`}>
+                                {new Date(receipt.due_date).toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {!isExpired && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleViewDetails(receipt)}
+                          >
+                            View Details
+                          </Button>
                         )}
-                      </div>
-                      <Button variant="outline" size="sm" className="w-full">
-                        View Details
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-12">
@@ -364,6 +408,12 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ReceiptDetailModal
+        receipt={selectedReceipt}
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+      />
     </div>
   );
 };
