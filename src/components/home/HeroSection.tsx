@@ -43,7 +43,7 @@ export function HeroSection() {
           <div className="rounded-lg shadow-lg bg-white/10 backdrop-blur p-4 sm:p-6 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0 pointer-events-none" />
             <div className="relative z-10">
-              <img src="/placeholder.svg" alt="Receipt Tracker Dashboard" className="rounded border border-white/20 shadow-xl" />
+              <img alt="Receipt Tracker Dashboard" className="rounded border border-white/20 shadow-xl" src="/lovable-uploads/631e38db-0f52-4b96-ba67-3a152d865fe1.png" />
               <div className="mt-4 flex justify-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-white/50" />
                 <div className="w-2 h-2 rounded-full bg-white" />
