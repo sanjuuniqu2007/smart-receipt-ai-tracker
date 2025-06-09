@@ -102,7 +102,7 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="cursor-pointer flex items-center gap-3 p-3 text-destructive focus:text-destructive hover:bg-destructive/10 rounded-lg transition-colors" onClick={handleSignOut}>
                     <LogOut className="h-4 w-4" />
-                    <span className="font-medium">🚪 Sign out</span>
+                    <span className="font-medium">Sign out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
