@@ -92,7 +92,7 @@ export function Header() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs">📧</span>
+                        <span className="text-xs"></span>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
                     </div>
