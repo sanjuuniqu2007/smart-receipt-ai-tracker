@@ -5,48 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from "recharts";
-import {
-  Calendar,
-  DollarSign,
-  FileText,
-  Search,
-  Filter,
-  TrendingUp,
-  MoreVertical,
-  Eye,
-  Edit,
-  Trash2,
-  Download,
-  Plus,
-  AlertCircle,
-} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { Calendar, DollarSign, FileText, Search, Filter, TrendingUp, MoreVertical, Eye, Edit, Trash2, Download, Plus, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
@@ -57,7 +19,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Receipt, NotificationHistory } from "@/types/database.types";
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { Checkbox } from "@/components/ui/checkbox";
-
 const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -69,41 +30,42 @@ const Dashboard = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedReceiptIds, setSelectedReceiptIds] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     fetchReceipts();
     fetchNotificationHistory();
   }, []);
-
   const fetchReceipts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('receipts')
-        .select('*')
-        .order('receipt_date', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('receipts').select('*').order('receipt_date', {
+        ascending: false
+      });
       if (error) throw error;
       setReceipts(data || []);
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to fetch receipts.",
+        description: error.message || "Failed to fetch receipts."
       });
     } finally {
       setLoading(false);
     }
   };
-  
   const fetchNotificationHistory = async () => {
     try {
-      const { data, error } = await supabase
-        .from('notification_history')
-        .select('*')
-        .order('sent_at', { ascending: false });
-        
+      const {
+        data,
+        error
+      } = await supabase.from('notification_history').select('*').order('sent_at', {
+        ascending: false
+      });
       if (error) throw error;
       setNotificationHistory(data || []);
     } catch (error: any) {
@@ -111,7 +73,7 @@ const Dashboard = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to fetch notification history.",
+        description: error.message || "Failed to fetch notification history."
       });
     }
   };
@@ -124,7 +86,6 @@ const Dashboard = () => {
       setSelectedReceiptIds(prev => prev.filter(id => id !== receiptId));
     }
   };
-
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedReceiptIds(filteredReceipts.map(r => r.id));
@@ -132,21 +93,16 @@ const Dashboard = () => {
       setSelectedReceiptIds([]);
     }
   };
-
   const handleBulkDelete = async () => {
     if (selectedReceiptIds.length === 0) return;
-
     try {
-      const { error } = await supabase
-        .from('receipts')
-        .delete()
-        .in('id', selectedReceiptIds);
-
+      const {
+        error
+      } = await supabase.from('receipts').delete().in('id', selectedReceiptIds);
       if (error) throw error;
-
       toast({
         title: "Success",
-        description: `${selectedReceiptIds.length} receipt(s) deleted successfully.`,
+        description: `${selectedReceiptIds.length} receipt(s) deleted successfully.`
       });
 
       // Refresh receipts
@@ -157,26 +113,21 @@ const Dashboard = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to delete receipts.",
+        description: error.message || "Failed to delete receipts."
       });
     }
   };
-
-  const filteredReceipts = receipts.filter((receipt) => {
-    const matchesSearch = receipt.vendor?.toLowerCase().includes(search.toLowerCase()) ||
-                         receipt.category?.toLowerCase().includes(search.toLowerCase()) ||
-                         receipt.notes?.toLowerCase().includes(search.toLowerCase());
+  const filteredReceipts = receipts.filter(receipt => {
+    const matchesSearch = receipt.vendor?.toLowerCase().includes(search.toLowerCase()) || receipt.category?.toLowerCase().includes(search.toLowerCase()) || receipt.notes?.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === "all" || receipt.category === categoryFilter;
     const matchesStatus = statusFilter === "all" || receipt.payment_status === statusFilter;
-    
     return matchesSearch && matchesCategory && matchesStatus;
   });
-
   const totalReceipts = receipts.length;
   const totalAmount = receipts.reduce((sum, receipt) => sum + receipt.amount, 0);
-  const paidReceipts = receipts.filter((receipt) => receipt.payment_status === 'paid').length;
-  const pendingReceipts = receipts.filter((receipt) => receipt.payment_status === 'pending').length;
-  const overdueReceiptsCount = receipts.filter((receipt) => receipt.payment_status === 'overdue').length;
+  const paidReceipts = receipts.filter(receipt => receipt.payment_status === 'paid').length;
+  const pendingReceipts = receipts.filter(receipt => receipt.payment_status === 'pending').length;
+  const overdueReceiptsCount = receipts.filter(receipt => receipt.payment_status === 'overdue').length;
 
   // Chart data
   const categoryData = receipts.reduce((acc: any, receipt) => {
@@ -184,38 +135,33 @@ const Dashboard = () => {
     acc[category] = (acc[category] || 0) + receipt.amount;
     return acc;
   }, {});
-
   const chartData = Object.entries(categoryData).map(([category, amount]) => ({
     name: category,
-    amount: amount as number,
+    amount: amount as number
   }));
-
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#a45de2'];
-
   const pieData = Object.entries(categoryData).map(([category, amount], index) => ({
     name: category,
     value: amount as number,
-    color: COLORS[index % COLORS.length],
+    color: COLORS[index % COLORS.length]
   }));
 
   // Monthly spending data
   const monthlySpendingData = receipts.reduce((acc: any, receipt) => {
-    const month = new Date(receipt.receipt_date).toLocaleString('default', { month: 'short' });
+    const month = new Date(receipt.receipt_date).toLocaleString('default', {
+      month: 'short'
+    });
     acc[month] = (acc[month] || 0) + receipt.amount;
     return acc;
   }, {});
-
   const monthlyChartData = Object.entries(monthlySpendingData).map(([month, amount]) => ({
     month,
-    amount: amount as number,
+    amount: amount as number
   }));
-
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
-
-  return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+  return <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -243,7 +189,7 @@ const Dashboard = () => {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </div>
             <span className="text-2xl font-bold">{totalReceipts}</span>
-            <span className="text-sm text-green-500">+20% this month</span>
+            <span className="text-sm text-green-500">Receipts</span>
           </CardContent>
         </Card>
         <Card>
@@ -253,7 +199,7 @@ const Dashboard = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </div>
             <span className="text-2xl font-bold">${totalAmount.toFixed(2)}</span>
-            <span className="text-sm text-red-500">-5% this month</span>
+            <span className="text-sm text-red-500">Amount</span>
           </CardContent>
         </Card>
         <Card>
@@ -263,7 +209,7 @@ const Dashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </div>
             <span className="text-2xl font-bold">{paidReceipts}</span>
-            <span className="text-sm text-green-500">+10% this month</span>
+            <span className="text-sm text-green-500">Paid</span>
           </CardContent>
         </Card>
         <Card>
@@ -273,7 +219,7 @@ const Dashboard = () => {
               <AlertCircle className="h-4 w-4 text-muted-foreground" />
             </div>
             <span className="text-2xl font-bold">{pendingReceipts}</span>
-            <span className="text-sm text-red-500">-3% this month</span>
+            <span className="text-sm text-red-500">Pending</span>
           </CardContent>
         </Card>
       </div>
@@ -293,12 +239,7 @@ const Dashboard = () => {
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search receipts..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
+                <Input placeholder="Search receipts..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
               </div>
             </div>
             
@@ -332,17 +273,12 @@ const Dashboard = () => {
           </div>
 
           {/* Bulk Actions */}
-          {selectedReceiptIds.length > 0 && (
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+          {selectedReceiptIds.length > 0 && <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
               <span className="text-sm font-medium">
                 {selectedReceiptIds.length} receipt(s) selected
               </span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedReceiptIds([])}
-                >
+                <Button variant="outline" size="sm" onClick={() => setSelectedReceiptIds([])}>
                   Clear Selection
                 </Button>
                 <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -369,33 +305,23 @@ const Dashboard = () => {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-            </div>
-          )}
+            </div>}
 
           {/* Receipts Grid */}
           <div className="space-y-4">
             {/* Select All Checkbox */}
-            {filteredReceipts.length > 0 && (
-              <div className="flex items-center gap-2 p-2">
-                <Checkbox
-                  checked={filteredReceipts.length > 0 && selectedReceiptIds.length === filteredReceipts.length}
-                  onCheckedChange={handleSelectAll}
-                />
+            {filteredReceipts.length > 0 && <div className="flex items-center gap-2 p-2">
+                <Checkbox checked={filteredReceipts.length > 0 && selectedReceiptIds.length === filteredReceipts.length} onCheckedChange={handleSelectAll} />
                 <Label className="text-sm text-muted-foreground">
                   Select all ({filteredReceipts.length} receipts)
                 </Label>
-              </div>
-            )}
+              </div>}
 
-            {filteredReceipts.length === 0 ? (
-              <div className="text-center py-12">
+            {filteredReceipts.length === 0 ? <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-1">No receipts found</h3>
                 <p className="text-muted-foreground mb-4">
-                  {search || categoryFilter !== "all" || statusFilter !== "all" 
-                    ? "Try adjusting your filters or search terms"
-                    : "Start by uploading your first receipt"
-                  }
+                  {search || categoryFilter !== "all" || statusFilter !== "all" ? "Try adjusting your filters or search terms" : "Start by uploading your first receipt"}
                 </p>
                 <Link to="/upload">
                   <Button>
@@ -403,26 +329,15 @@ const Dashboard = () => {
                     Upload Receipt
                   </Button>
                 </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredReceipts.map((receipt) => (
-                  <Card key={receipt.id} className="group hover:shadow-lg transition-all duration-200 relative">
+              </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredReceipts.map(receipt => <Card key={receipt.id} className="group hover:shadow-lg transition-all duration-200 relative">
                     <div className="absolute top-4 left-4 z-10">
-                      <Checkbox
-                        checked={selectedReceiptIds.includes(receipt.id)}
-                        onCheckedChange={(checked) => handleSelectReceipt(receipt.id, checked as boolean)}
-                        className="bg-background border-2"
-                      />
+                      <Checkbox checked={selectedReceiptIds.includes(receipt.id)} onCheckedChange={checked => handleSelectReceipt(receipt.id, checked as boolean)} className="bg-background border-2" />
                     </div>
                     
                     <CardContent className="p-0">
                       <div className="relative h-48 bg-muted">
-                        <img
-                          src={receipt.image_url || "/placeholder.svg"}
-                          alt={`Receipt from ${receipt.vendor}`}
-                          className="w-full h-full object-cover rounded-t-lg"
-                        />
+                        <img src={receipt.image_url || "/placeholder.svg"} alt={`Receipt from ${receipt.vendor}`} className="w-full h-full object-cover rounded-t-lg" />
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-t-lg" />
                         
                         <div className="absolute top-4 right-4">
@@ -433,12 +348,10 @@ const Dashboard = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem 
-                                onClick={() => {
-                                  setSelectedReceipt(receipt);
-                                  setDetailModalOpen(true);
-                                }}
-                              >
+                              <DropdownMenuItem onClick={() => {
+                          setSelectedReceipt(receipt);
+                          setDetailModalOpen(true);
+                        }}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
@@ -475,12 +388,10 @@ const Dashboard = () => {
                             <Calendar className="h-4 w-4" />
                             {new Date(receipt.receipt_date).toLocaleDateString()}
                           </div>
-                          {receipt.due_date && (
-                            <div className="flex items-center gap-1">
+                          {receipt.due_date && <div className="flex items-center gap-1">
                               <AlertCircle className="h-4 w-4" />
                               Due {new Date(receipt.due_date).toLocaleDateString()}
-                            </div>
-                          )}
+                            </div>}
                         </div>
 
                         <div className="flex items-center justify-between">
@@ -488,23 +399,16 @@ const Dashboard = () => {
                             {receipt.payment_status}
                           </Badge>
                           
-                          <NotificationBadge 
-                            receiptId={receipt.id} 
-                            notifications={notificationHistory}
-                          />
+                          <NotificationBadge receiptId={receipt.id} notifications={notificationHistory} />
                         </div>
 
-                        {receipt.notes && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
+                        {receipt.notes && <p className="text-sm text-muted-foreground line-clamp-2">
                             {receipt.notes}
-                          </p>
-                        )}
+                          </p>}
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                  </Card>)}
+              </div>}
           </div>
         </TabsContent>
 
@@ -537,19 +441,8 @@ const Dashboard = () => {
                 <h3 className="text-lg font-semibold mb-4">Category Distribution</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      label
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+                      {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                     </Pie>
                     <Tooltip />
                   </PieChart>
@@ -567,7 +460,9 @@ const Dashboard = () => {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="amount" stroke="#8884d8" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="amount" stroke="#8884d8" activeDot={{
+                  r: 8
+                }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -576,13 +471,7 @@ const Dashboard = () => {
       </Tabs>
 
       {/* Receipt Detail Modal */}
-      <ReceiptDetailModal
-        receipt={selectedReceipt}
-        open={detailModalOpen}
-        onOpenChange={setDetailModalOpen}
-      />
-    </div>
-  );
+      <ReceiptDetailModal receipt={selectedReceipt} open={detailModalOpen} onOpenChange={setDetailModalOpen} />
+    </div>;
 };
-
 export default Dashboard;
