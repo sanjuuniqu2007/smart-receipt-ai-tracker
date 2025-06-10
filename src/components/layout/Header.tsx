@@ -108,7 +108,7 @@ export function Header() {
               </DropdownMenu>
             </div> : <>
               <Link to="/auth/login" className="hidden md:block">
-                <Button variant="ghost">Sign in</Button>
+                <Button variant="ghost" className="rounded-md">Sign in</Button>
               </Link>
               <Link to="/auth/register" className="hidden md:block">
                 <Button>Sign up</Button>
