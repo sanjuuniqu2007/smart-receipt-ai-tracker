@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
@@ -5,11 +6,11 @@ import { Link } from "react-router-dom";
 import { TestEmailButton } from "@/components/notifications/TestEmailButton";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { supabase } from "@/integrations/supabase/client";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable } from "@/components/receipts/DataTable";
 import { columns } from "@/components/receipts/columns";
 import { TestScheduledNotifications } from "@/components/notifications/TestScheduledNotifications";
 
-export function Dashboard() {
+export default function Dashboard() {
   const [receipts, setReceipts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
