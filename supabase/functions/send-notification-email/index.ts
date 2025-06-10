@@ -90,7 +90,7 @@ serve(async (req: Request) => {
               
               <p>Take action now to avoid any issues:</p>
               
-              <a href="${supabaseUrl.replace('supabase.co', 'vercel.app')}/dashboard" class="button">
+              <a href="${supabaseUrl.replace('.supabase.co', '.vercel.app')}/dashboard" class="button">
                 🔍 View Receipt Details
               </a>
               
@@ -129,25 +129,6 @@ serve(async (req: Request) => {
     }
 
     console.log('Email sent successfully:', emailResult);
-
-    // Log notification in database
-    const { error: logError } = await supabase
-      .from('notification_history')
-      .insert({
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-        receipt_id: receiptId,
-        notification_type: 'email',
-        status: 'sent',
-        content: {
-          email_id: emailResult.id,
-          to: to,
-          subject: 'Upcoming Receipt Expiry – Action Needed',
-        },
-      });
-
-    if (logError) {
-      console.error('Error logging notification:', logError);
-    }
 
     return new Response(
       JSON.stringify({ 

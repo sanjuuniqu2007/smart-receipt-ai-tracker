@@ -73,25 +73,6 @@ serve(async (req: Request) => {
 
     console.log('SMS sent successfully:', smsResult);
 
-    // Log notification in database
-    const { error: logError } = await supabase
-      .from('notification_history')
-      .insert({
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-        receipt_id: receiptId,
-        notification_type: 'sms',
-        status: 'sent',
-        content: {
-          message_sid: smsResult.sid,
-          to: to,
-          message: smsMessage,
-        },
-      });
-
-    if (logError) {
-      console.error('Error logging SMS notification:', logError);
-    }
-
     return new Response(
       JSON.stringify({ 
         success: true, 
