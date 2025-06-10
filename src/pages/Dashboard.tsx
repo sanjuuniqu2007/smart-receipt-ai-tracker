@@ -15,10 +15,12 @@ import { Link } from "react-router-dom";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { UpcomingDueReceipts } from "@/components/notifications/UpcomingDueReceipts";
 import { ReceiptDetailModal } from "@/components/receipts/ReceiptDetailModal";
+import { TestNotificationButton } from "@/components/notifications/TestNotificationButton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Receipt, NotificationHistory } from "@/types/database.types";
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { Checkbox } from "@/components/ui/checkbox";
+
 const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -170,6 +172,7 @@ const Dashboard = () => {
         </div>
         
         <div className="flex items-center gap-3">
+          <TestNotificationButton />
           <NotificationSettings />
           <Link to="/upload">
             <Button>
@@ -474,4 +477,5 @@ const Dashboard = () => {
       <ReceiptDetailModal receipt={selectedReceipt} open={detailModalOpen} onOpenChange={setDetailModalOpen} />
     </div>;
 };
+
 export default Dashboard;

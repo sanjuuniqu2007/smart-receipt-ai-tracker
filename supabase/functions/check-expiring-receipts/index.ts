@@ -21,9 +21,11 @@ serve(async (req: Request) => {
 
     console.log('Starting daily receipt expiry check...');
 
-    // Get today's date
+    // Get today's date in local timezone
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayString = today.toISOString().split('T')[0];
+    
+    console.log(`Today's date: ${todayString}`);
 
     // Get all user preferences
     const { data: userPreferences, error: prefsError } = await supabase
@@ -34,31 +36,30 @@ serve(async (req: Request) => {
       throw new Error(`Error fetching user preferences: ${prefsError.message}`);
     }
 
+    console.log(`Found ${userPreferences?.length || 0} users with preferences`);
+
     let totalNotificationsSent = 0;
     let errors: string[] = [];
 
     // Process each user
     for (const userPref of userPreferences || []) {
       try {
-        console.log(`Processing notifications for user: ${userPref.user_id}`);
+        console.log(`Processing notifications for user: ${userPref.user_id}, notify_days_before: ${userPref.notify_days_before}`);
 
-        // Calculate the date range for notifications
-        // If user wants 1 day before notification, we check receipts expiring tomorrow
-        const notificationStartDate = new Date(today);
-        notificationStartDate.setDate(today.getDate() + userPref.notify_days_before);
-        
-        const notificationEndDate = new Date(notificationStartDate);
-        notificationEndDate.setDate(notificationStartDate.getDate() + 1);
+        // Calculate the target due date for notification
+        // If user wants notification 1 day before, we notify for receipts due tomorrow
+        const targetDate = new Date();
+        targetDate.setDate(today.getDate() + userPref.notify_days_before);
+        const targetDateString = targetDate.toISOString().split('T')[0];
 
-        console.log(`Checking receipts expiring between ${notificationStartDate.toISOString().split('T')[0]} and ${notificationEndDate.toISOString().split('T')[0]} for user ${userPref.user_id}`);
+        console.log(`Looking for receipts due on: ${targetDateString} for user ${userPref.user_id}`);
 
-        // Get user's receipts that are expiring within the notification window
+        // Get user's receipts that are due on the target date
         const { data: receipts, error: receiptsError } = await supabase
           .from('receipts')
           .select('*')
           .eq('user_id', userPref.user_id)
-          .gte('due_date', notificationStartDate.toISOString().split('T')[0])
-          .lt('due_date', notificationEndDate.toISOString().split('T')[0])
+          .eq('due_date', targetDateString)
           .neq('payment_status', 'paid'); // Only notify for unpaid receipts
 
         if (receiptsError) {
@@ -68,11 +69,11 @@ serve(async (req: Request) => {
         }
 
         if (!receipts || receipts.length === 0) {
-          console.log(`No expiring receipts found for user ${userPref.user_id}`);
+          console.log(`No receipts due on ${targetDateString} found for user ${userPref.user_id}`);
           continue;
         }
 
-        console.log(`Found ${receipts.length} expiring receipts for user ${userPref.user_id}`);
+        console.log(`Found ${receipts.length} receipts due on ${targetDateString} for user ${userPref.user_id}`);
 
         // Get user email
         const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userPref.user_id);
@@ -83,17 +84,19 @@ serve(async (req: Request) => {
           continue;
         }
 
-        // Process each expiring receipt
+        console.log(`User email: ${user.email}`);
+
+        // Process each receipt due on target date
         for (const receipt of receipts) {
-          console.log(`Processing receipt ${receipt.id} for user ${userPref.user_id}`);
+          console.log(`Processing receipt ${receipt.id} (${receipt.vendor}) for user ${userPref.user_id}`);
 
           // Check if we've already sent a notification for this receipt today
           const { data: existingNotifications } = await supabase
             .from('notification_history')
             .select('id')
             .eq('receipt_id', receipt.id)
-            .gte('sent_at', today.toISOString())
-            .lt('sent_at', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString());
+            .gte('sent_at', `${todayString}T00:00:00Z`)
+            .lt('sent_at', `${todayString}T23:59:59Z`);
 
           if (existingNotifications && existingNotifications.length > 0) {
             console.log(`Notification already sent for receipt ${receipt.id} today`);
@@ -104,7 +107,7 @@ serve(async (req: Request) => {
           for (const notifyMethod of userPref.notify_by) {
             try {
               if (notifyMethod === 'email') {
-                console.log(`Sending email notification for receipt ${receipt.id}`);
+                console.log(`Sending email notification for receipt ${receipt.id} to ${user.email}`);
                 
                 // Send email notification
                 const emailResponse = await supabase.functions.invoke('send-notification-email', {
@@ -124,7 +127,7 @@ serve(async (req: Request) => {
                   throw new Error(`Email failed: ${emailResponse.error.message}`);
                 }
 
-                console.log(`Email notification sent for receipt ${receipt.id}`);
+                console.log(`Email notification sent successfully for receipt ${receipt.id}`);
                 totalNotificationsSent++;
 
                 // Log successful notification
@@ -140,7 +143,7 @@ serve(async (req: Request) => {
               }
 
               if (notifyMethod === 'sms' && userPref.phone_number) {
-                console.log(`Sending SMS notification for receipt ${receipt.id}`);
+                console.log(`Sending SMS notification for receipt ${receipt.id} to ${userPref.phone_number}`);
                 
                 // Send SMS notification
                 const smsResponse = await supabase.functions.invoke('send-notification-sms', {
@@ -159,7 +162,7 @@ serve(async (req: Request) => {
                   throw new Error(`SMS failed: ${smsResponse.error.message}`);
                 }
 
-                console.log(`SMS notification sent for receipt ${receipt.id}`);
+                console.log(`SMS notification sent successfully for receipt ${receipt.id}`);
                 totalNotificationsSent++;
 
                 // Log successful notification

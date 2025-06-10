@@ -11,6 +11,7 @@ import { Receipt } from "@/types/database.types";
 
 interface UpcomingDueReceiptsProps {
   receipts: Receipt[];
+  onViewDetails?: (receipt: Receipt) => void;
 }
 
 // Helper function to get days until due
@@ -29,7 +30,7 @@ function getBadgeVariant(days: number): "default" | "secondary" | "destructive" 
   return "secondary";
 }
 
-export function UpcomingDueReceipts({ receipts }: UpcomingDueReceiptsProps) {
+export function UpcomingDueReceipts({ receipts, onViewDetails }: UpcomingDueReceiptsProps) {
   // Sort by due date (closest first)
   const sortedReceipts = [...receipts]
     .filter(r => r.due_date)
@@ -53,10 +54,6 @@ export function UpcomingDueReceipts({ receipts }: UpcomingDueReceiptsProps) {
       const dueDate = new Date(r.due_date!);
       return dueDate >= today && dueDate <= next7Days;
     }
-  );
-  
-  const laterReceipts = sortedReceipts.filter(
-    r => new Date(r.due_date!) > next7Days
   );
 
   if (sortedReceipts.length === 0) {
@@ -121,7 +118,13 @@ export function UpcomingDueReceipts({ receipts }: UpcomingDueReceiptsProps) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm">View Details</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => onViewDetails?.(receipt)}
+                  >
+                    View Details
+                  </Button>
                 </TableCell>
               </TableRow>
             );
