@@ -1,6 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 
 export const columns = [
   {
@@ -8,7 +8,7 @@ export const columns = [
     header: "Merchant",
   },
   {
-    accessorKey: "total_amount",
+    accessorKey: "total_amount", 
     header: "Amount",
     cell: ({ row }: { row: { original: any } }) => {
       const amount = parseFloat(row.original.total_amount);
@@ -22,9 +22,14 @@ export const columns = [
   },
   {
     accessorKey: "purchase_date",
-    header: "Purchase Date",
+    header: "Purchase Date", 
     cell: ({ row }: { row: { original: any } }) => {
-      return format(new Date(row.original.purchase_date), "PPP");
+      if (!row.original.purchase_date) return "N/A";
+      
+      const date = new Date(row.original.purchase_date);
+      if (!isValid(date)) return "Invalid date";
+      
+      return format(date, "PPP");
     },
   },
   {
@@ -34,6 +39,8 @@ export const columns = [
       if (!row.original.warranty_expiry) return "N/A";
       
       const expiryDate = new Date(row.original.warranty_expiry);
+      if (!isValid(expiryDate)) return "Invalid date";
+      
       const today = new Date();
       const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       
