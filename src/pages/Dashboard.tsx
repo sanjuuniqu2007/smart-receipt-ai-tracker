@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Receipt, NotificationHistory } from "@/types/database.types";
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TestEmailButton } from "@/components/notifications/TestEmailButton";
 
 const Dashboard = () => {
   const [search, setSearch] = useState("");
@@ -172,6 +173,7 @@ const Dashboard = () => {
         </div>
         
         <div className="flex items-center gap-3">
+          <TestEmailButton />
           <TestNotificationButton />
           <NotificationSettings />
           <Link to="/upload">

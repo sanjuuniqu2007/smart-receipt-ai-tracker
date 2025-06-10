@@ -25,17 +25,38 @@ serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    console.log('Starting email notification function...');
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
 
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasResendKey: !!resendApiKey
+    });
+
     if (!resendApiKey) {
+      console.error('RESEND_API_KEY is missing');
       throw new Error('RESEND_API_KEY is not configured');
+    }
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Supabase environment variables missing');
+      throw new Error('Supabase configuration is incomplete');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { to, receiptId, receiptData }: EmailRequest = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body received:', requestBody);
+
+    const { to, receiptId, receiptData }: EmailRequest = requestBody;
+
+    if (!to || !receiptData) {
+      throw new Error('Missing required email parameters');
+    }
 
     console.log('Sending notification email to:', to, 'for receipt:', receiptId);
 
@@ -84,13 +105,13 @@ serve(async (req: Request) => {
                 <p><strong>Receipt Details:</strong></p>
                 <p>📍 <strong>Vendor:</strong> ${receiptData.vendor}</p>
                 <p>📂 <strong>Category:</strong> ${receiptData.category}</p>
-                <p>💰 <strong>Amount:</strong> <span class="amount">₹${amount}</span></p>
+                <p>💰 <strong>Amount:</strong> <span class="amount">$${amount}</span></p>
                 <p>📅 <strong>Due Date:</strong> <span class="due-date">${dueDate}</span></p>
               </div>
               
               <p>Take action now to avoid any issues:</p>
               
-              <a href="${supabaseUrl.replace('.supabase.co', '.vercel.app')}/dashboard" class="button">
+              <a href="https://lqjtzgkqggojssfezior.supabase.co/dashboard" class="button">
                 🔍 View Receipt Details
               </a>
               
@@ -106,6 +127,8 @@ serve(async (req: Request) => {
       </html>
     `;
 
+    console.log('Preparing to send email via Resend...');
+
     // Send email using Resend
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -114,7 +137,7 @@ serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Smart Receipt Tracker <noreply@yourdomain.com>',
+        from: 'Smart Receipt Tracker <noreply@resend.dev>',
         to: [to],
         subject: 'Upcoming Receipt Expiry – Action Needed',
         html: emailHtml,
@@ -122,13 +145,15 @@ serve(async (req: Request) => {
     });
 
     const emailResult = await emailResponse.json();
+    console.log('Resend API response status:', emailResponse.status);
+    console.log('Resend API response:', emailResult);
 
     if (!emailResponse.ok) {
-      console.error('Error sending email:', emailResult);
-      throw new Error(`Failed to send email: ${emailResult.message || 'Unknown error'}`);
+      console.error('Error sending email via Resend:', emailResult);
+      throw new Error(`Failed to send email: ${emailResult.message || emailResponse.statusText}`);
     }
 
-    console.log('Email sent successfully:', emailResult);
+    console.log('Email sent successfully via Resend:', emailResult);
 
     return new Response(
       JSON.stringify({ 

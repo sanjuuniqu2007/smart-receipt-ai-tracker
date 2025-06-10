@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,60 +23,75 @@ serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    console.log('Starting SMS notification function...');
+    
     const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
     const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
 
+    console.log('Twilio environment check:', {
+      hasAccountSid: !!twilioAccountSid,
+      hasAuthToken: !!twilioAuthToken,
+      hasPhoneNumber: !!twilioPhoneNumber
+    });
+
     if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-      throw new Error('Twilio credentials are not configured');
+      console.error('Twilio environment variables missing');
+      throw new Error('Twilio configuration is incomplete');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const requestBody = await req.json();
+    console.log('SMS request body received:', requestBody);
 
-    const { to, receiptId, receiptData }: SMSRequest = await req.json();
+    const { to, receiptId, receiptData }: SMSRequest = requestBody;
+
+    if (!to || !receiptData) {
+      throw new Error('Missing required SMS parameters');
+    }
 
     console.log('Sending SMS notification to:', to, 'for receipt:', receiptId);
 
-    // Format the due date
+    // Format the due date and create message
     const dueDate = new Date(receiptData.due_date).toLocaleDateString();
     const amount = receiptData.amount.toFixed(2);
+    
+    const message = `🧾 Receipt Reminder: Your ${receiptData.vendor} receipt ($${amount}) is due on ${dueDate}. Please take action if needed.`;
 
-    // Create SMS content
-    const smsMessage = `🧾 Receipt Reminder: Your receipt from ${receiptData.vendor} (₹${amount}) is expiring on ${dueDate}. Please check Smart Receipt Tracker for details.`;
+    console.log('Preparing to send SMS via Twilio...');
 
     // Send SMS using Twilio
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
-    const credentials = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
+    
+    const formData = new URLSearchParams();
+    formData.append('From', twilioPhoneNumber);
+    formData.append('To', to);
+    formData.append('Body', message);
 
     const smsResponse = await fetch(twilioUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${credentials}`,
+        'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        From: twilioPhoneNumber,
-        To: to,
-        Body: smsMessage,
-      }),
+      body: formData,
     });
 
     const smsResult = await smsResponse.json();
+    console.log('Twilio API response status:', smsResponse.status);
+    console.log('Twilio API response:', smsResult);
 
     if (!smsResponse.ok) {
-      console.error('Error sending SMS:', smsResult);
-      throw new Error(`Failed to send SMS: ${smsResult.message || 'Unknown error'}`);
+      console.error('Error sending SMS via Twilio:', smsResult);
+      throw new Error(`Failed to send SMS: ${smsResult.message || smsResponse.statusText}`);
     }
 
-    console.log('SMS sent successfully:', smsResult);
+    console.log('SMS sent successfully via Twilio:', smsResult);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'SMS sent successfully',
-        messageSid: smsResult.sid 
+        smsId: smsResult.sid 
       }),
       {
         status: 200,
