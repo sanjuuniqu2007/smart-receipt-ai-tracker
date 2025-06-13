@@ -22,6 +22,7 @@ import { NotificationBadge } from "@/components/notifications/NotificationBadge"
 import { Checkbox } from "@/components/ui/checkbox";
 import { TestEmailButton } from "@/components/notifications/TestEmailButton";
 import { TestSMSButton } from "@/components/notifications/TestSMSButton";
+import { ScheduleNotifications } from "@/components/notifications/ScheduleNotifications";
 
 const Dashboard = () => {
   const [search, setSearch] = useState("");
@@ -165,7 +166,8 @@ const Dashboard = () => {
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
-  return <div className="container mx-auto px-4 py-8 space-y-8">
+  return (
+    <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -177,6 +179,7 @@ const Dashboard = () => {
           <TestEmailButton />
           <TestSMSButton />
           <TestNotificationButton />
+          <ScheduleNotifications />
           <NotificationSettings />
           <Link to="/upload">
             <Button>
@@ -477,7 +480,8 @@ const Dashboard = () => {
 
       {/* Receipt Detail Modal */}
       <ReceiptDetailModal receipt={selectedReceipt} open={detailModalOpen} onOpenChange={setDetailModalOpen} />
-    </div>;
+    </div>
+  );
 };
 
 export default Dashboard;
