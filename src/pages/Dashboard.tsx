@@ -122,6 +122,12 @@ const Dashboard = () => {
       });
     }
   };
+
+  // Add function to handle view details
+  const handleViewDetails = (receipt: Receipt) => {
+    setSelectedReceipt(receipt);
+    setDetailModalOpen(true);
+  };
   const filteredReceipts = receipts.filter(receipt => {
     const matchesSearch = receipt.vendor?.toLowerCase().includes(search.toLowerCase()) || receipt.category?.toLowerCase().includes(search.toLowerCase()) || receipt.notes?.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === "all" || receipt.category === categoryFilter;
@@ -425,7 +431,10 @@ const Dashboard = () => {
         <TabsContent value="upcoming" className="space-y-6">
           <div>
             <h2 className="text-2xl font-semibold mb-4">Upcoming Due Receipts</h2>
-            <UpcomingDueReceipts receipts={receipts.filter(r => r.due_date)} />
+            <UpcomingDueReceipts 
+              receipts={receipts.filter(r => r.due_date)} 
+              onViewDetails={handleViewDetails}
+            />
           </div>
         </TabsContent>
 
