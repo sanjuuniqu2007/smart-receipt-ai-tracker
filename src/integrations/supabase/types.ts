@@ -133,65 +133,6 @@ export type Database = {
         }
         Relationships: []
       }
-      scheduled_notifications: {
-        Row: {
-          content: Json | null
-          created_at: string
-          due_date: string
-          error_message: string | null
-          id: string
-          notification_type: string
-          receipt_id: string | null
-          recipient: string
-          schedule_days_before: number
-          scheduled_send_date: string
-          sent_at: string | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content?: Json | null
-          created_at?: string
-          due_date: string
-          error_message?: string | null
-          id?: string
-          notification_type: string
-          receipt_id?: string | null
-          recipient: string
-          schedule_days_before: number
-          scheduled_send_date: string
-          sent_at?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content?: Json | null
-          created_at?: string
-          due_date?: string
-          error_message?: string | null
-          id?: string
-          notification_type?: string
-          receipt_id?: string | null
-          recipient?: string
-          schedule_days_before?: number
-          scheduled_send_date?: string
-          sent_at?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scheduled_notifications_receipt_id_fkey"
-            columns: ["receipt_id"]
-            isOneToOne: false
-            referencedRelation: "receipts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_preferences: {
         Row: {
           notify_by: string[] | null

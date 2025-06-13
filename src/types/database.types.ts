@@ -56,23 +56,6 @@ export interface NotificationHistory {
   created_at: string;
 }
 
-export interface ScheduledNotification {
-  id: string;
-  user_id: string;
-  receipt_id?: string | null;
-  notification_type: 'email' | 'sms';
-  recipient: string;
-  due_date: string;
-  schedule_days_before: number;
-  scheduled_send_date: string;
-  status: 'scheduled' | 'sent' | 'failed' | 'cancelled';
-  content?: any;
-  error_message?: string | null;
-  created_at: string;
-  updated_at: string;
-  sent_at?: string | null;
-}
-
 export interface UserPreferences {
   user_id: string;
   phone_number?: string;
@@ -104,11 +87,6 @@ export interface Database {
         Row: NotificationHistory;
         Insert: Omit<NotificationHistory, 'id' | 'created_at'>;
         Update: Partial<Omit<NotificationHistory, 'id' | 'created_at'>>;
-      };
-      scheduled_notifications: {
-        Row: ScheduledNotification;
-        Insert: Omit<ScheduledNotification, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<ScheduledNotification, 'id' | 'created_at' | 'updated_at'>>;
       };
       user_preferences: {
         Row: UserPreferences;
