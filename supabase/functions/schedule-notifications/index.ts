@@ -42,13 +42,20 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Scheduling notifications for user:', user.id);
     console.log('Schedule days:', scheduleDays);
 
+    // Get current date at start of day for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayString = today.toISOString().split('T')[0];
+
+    console.log('Today date for comparison:', todayString);
+
     // Find the next upcoming receipt with due date
     const { data: upcomingReceipts, error: receiptError } = await supabase
       .from('receipts')
       .select('*')
       .eq('user_id', user.id)
       .not('due_date', 'is', null)
-      .gte('due_date', new Date().toISOString().split('T')[0])
+      .gte('due_date', todayString)
       .order('due_date', { ascending: true })
       .limit(1);
 
@@ -70,17 +77,29 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const receipt = upcomingReceipts[0];
-    const dueDate = new Date(receipt.due_date);
+    console.log('Found receipt:', receipt.id, 'with due date:', receipt.due_date);
+    
+    // Parse due date properly
+    const dueDate = new Date(receipt.due_date + 'T00:00:00.000Z');
     let scheduledCount = 0;
 
     // Schedule notifications for each selected day
     for (const days of scheduleDays) {
+      // Calculate scheduled send date by subtracting days from due date
       const scheduledSendDate = new Date(dueDate);
       scheduledSendDate.setDate(scheduledSendDate.getDate() - days);
+      
+      // Convert to start of day for comparison
+      const scheduledDateOnly = new Date(scheduledSendDate);
+      scheduledDateOnly.setHours(0, 0, 0, 0);
 
-      // Skip if scheduled date is in the past
-      if (scheduledSendDate <= new Date()) {
-        console.log(`Skipping schedule for ${days} days before - date is in the past`);
+      console.log(`Checking ${days} days before due date:`, scheduledSendDate.toISOString());
+      console.log('Today:', today.toISOString());
+      console.log('Is scheduled date in future?', scheduledDateOnly > today);
+
+      // Skip if scheduled date is in the past or today
+      if (scheduledDateOnly <= today) {
+        console.log(`Skipping schedule for ${days} days before - date is in the past or today`);
         continue;
       }
 
@@ -105,12 +124,14 @@ const handler = async (req: Request): Promise<Response> => {
           due_date: receipt.due_date,
           schedule_days_before: days,
           scheduled_send_date: scheduledSendDate.toISOString(),
-          content: content
+          content: content,
+          status: 'scheduled'
         });
 
       if (emailError) {
         console.error('Error scheduling email:', emailError);
       } else {
+        console.log(`Successfully scheduled email for ${days} days before`);
         scheduledCount++;
       }
 
@@ -125,12 +146,14 @@ const handler = async (req: Request): Promise<Response> => {
           due_date: receipt.due_date,
           schedule_days_before: days,
           scheduled_send_date: scheduledSendDate.toISOString(),
-          content: content
+          content: content,
+          status: 'scheduled'
         });
 
       if (smsError) {
         console.error('Error scheduling SMS:', smsError);
       } else {
+        console.log(`Successfully scheduled SMS for ${days} days before`);
         scheduledCount++;
       }
     }
