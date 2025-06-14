@@ -39,15 +39,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { email, mobileNumber, scheduleDays }: ScheduleRequest = await req.json();
 
-    console.log('Scheduling notifications for user:', user.id);
-    console.log('Schedule days:', scheduleDays);
+    console.log('=== SCHEDULE NOTIFICATIONS REQUEST ===');
+    console.log('User ID:', user.id);
     console.log('Email:', email);
     console.log('Mobile:', mobileNumber);
+    console.log('Schedule days:', scheduleDays);
 
-    // Get current date in UTC for comparison
+    // Get current date for comparison (using local timezone)
     const now = new Date();
-    const todayUTC = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-    console.log('Today UTC:', todayUTC.toISOString());
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    console.log('Current time:', now.toISOString());
+    console.log('Today (local):', today.toISOString());
 
     // Find the next upcoming receipt with due date
     const { data: upcomingReceipts, error: receiptError } = await supabase
@@ -55,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
       .select('*')
       .eq('user_id', user.id)
       .not('due_date', 'is', null)
-      .gte('due_date', todayUTC.toISOString().split('T')[0])
+      .gte('due_date', today.toISOString().split('T')[0])
       .order('due_date', { ascending: true })
       .limit(1);
 
@@ -65,6 +68,14 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Found receipts:', upcomingReceipts?.length || 0);
+    if (upcomingReceipts && upcomingReceipts.length > 0) {
+      console.log('Next receipt:', {
+        id: upcomingReceipts[0].id,
+        vendor: upcomingReceipts[0].vendor,
+        due_date: upcomingReceipts[0].due_date,
+        amount: upcomingReceipts[0].amount
+      });
+    }
 
     if (!upcomingReceipts || upcomingReceipts.length === 0) {
       return new Response(
@@ -80,16 +91,17 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const receipt = upcomingReceipts[0];
-    console.log('Processing receipt:', {
-      id: receipt.id,
-      vendor: receipt.vendor,
-      due_date: receipt.due_date,
-      amount: receipt.amount
-    });
     
-    // Parse due date as UTC date
-    const dueDate = new Date(receipt.due_date + 'T00:00:00.000Z');
-    console.log('Due date parsed:', dueDate.toISOString());
+    // Parse due date correctly - due_date is stored as YYYY-MM-DD
+    const dueDateParts = receipt.due_date.split('-');
+    const dueDate = new Date(
+      parseInt(dueDateParts[0]), 
+      parseInt(dueDateParts[1]) - 1, 
+      parseInt(dueDateParts[2])
+    );
+    
+    console.log('Parsed due date:', dueDate.toISOString());
+    console.log('Due date components:', { year: dueDate.getFullYear(), month: dueDate.getMonth(), day: dueDate.getDate() });
     
     let scheduledCount = 0;
 
@@ -99,17 +111,19 @@ const handler = async (req: Request): Promise<Response> => {
       
       // Calculate scheduled send date by subtracting days from due date
       const scheduledSendDate = new Date(dueDate);
-      scheduledSendDate.setUTCDate(scheduledSendDate.getUTCDate() - days);
+      scheduledSendDate.setDate(scheduledSendDate.getDate() - days);
       
       console.log('Scheduled send date:', scheduledSendDate.toISOString());
-      console.log('Today:', todayUTC.toISOString());
-      console.log('Is scheduled date >= today?', scheduledSendDate >= todayUTC);
+      console.log('Today:', today.toISOString());
+      console.log('Is scheduled date >= today?', scheduledSendDate >= today);
 
       // Only schedule if the scheduled date is today or in the future
-      if (scheduledSendDate < todayUTC) {
-        console.log(`Skipping schedule for ${days} days before - date is in the past`);
+      if (scheduledSendDate < today) {
+        console.log(`❌ Skipping schedule for ${days} days before - date ${scheduledSendDate.toDateString()} is in the past`);
         continue;
       }
+
+      console.log(`✅ Scheduling for ${days} days before - date ${scheduledSendDate.toDateString()} is valid`);
 
       // Create content for notifications
       const content = {
@@ -121,10 +135,11 @@ const handler = async (req: Request): Promise<Response> => {
         daysBefore: days
       };
 
-      console.log('Scheduling notifications with content:', content);
+      console.log('Notification content:', content);
 
       try {
         // Schedule email notification
+        console.log('Inserting email notification...');
         const { data: emailInsert, error: emailError } = await supabase
           .from('scheduled_notifications')
           .insert({
@@ -132,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
             receipt_id: receipt.id,
             notification_type: 'email',
             recipient: email,
-            due_date: receipt.due_date,
+            due_date: dueDate.toISOString(),
             schedule_days_before: days,
             scheduled_send_date: scheduledSendDate.toISOString(),
             content: content,
@@ -141,14 +156,15 @@ const handler = async (req: Request): Promise<Response> => {
           .select();
 
         if (emailError) {
-          console.error('Error scheduling email:', emailError);
+          console.error('❌ Error scheduling email:', emailError);
           throw emailError;
         } else {
-          console.log(`Successfully scheduled email for ${days} days before, ID:`, emailInsert?.[0]?.id);
+          console.log('✅ Successfully scheduled email, ID:', emailInsert?.[0]?.id);
           scheduledCount++;
         }
 
         // Schedule SMS notification
+        console.log('Inserting SMS notification...');
         const { data: smsInsert, error: smsError } = await supabase
           .from('scheduled_notifications')
           .insert({
@@ -156,7 +172,7 @@ const handler = async (req: Request): Promise<Response> => {
             receipt_id: receipt.id,
             notification_type: 'sms',
             recipient: mobileNumber,
-            due_date: receipt.due_date,
+            due_date: dueDate.toISOString(),
             schedule_days_before: days,
             scheduled_send_date: scheduledSendDate.toISOString(),
             content: content,
@@ -165,14 +181,15 @@ const handler = async (req: Request): Promise<Response> => {
           .select();
 
         if (smsError) {
-          console.error('Error scheduling SMS:', smsError);
+          console.error('❌ Error scheduling SMS:', smsError);
           throw smsError;
         } else {
-          console.log(`Successfully scheduled SMS for ${days} days before, ID:`, smsInsert?.[0]?.id);
+          console.log('✅ Successfully scheduled SMS, ID:', smsInsert?.[0]?.id);
           scheduledCount++;
         }
+
       } catch (insertError) {
-        console.error(`Error inserting notifications for ${days} days:`, insertError);
+        console.error(`❌ Error inserting notifications for ${days} days:`, insertError);
         // Continue with other days even if one fails
       }
     }
@@ -199,7 +216,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error('Error in schedule-notifications function:', error);
+    console.error('❌ Error in schedule-notifications function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
