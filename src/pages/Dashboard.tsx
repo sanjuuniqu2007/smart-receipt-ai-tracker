@@ -15,7 +15,6 @@ import { Link } from "react-router-dom";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { UpcomingDueReceipts } from "@/components/notifications/UpcomingDueReceipts";
 import { ReceiptDetailModal } from "@/components/receipts/ReceiptDetailModal";
-import { TestNotificationButton } from "@/components/notifications/TestNotificationButton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Receipt, NotificationHistory } from "@/types/database.types";
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
@@ -184,7 +183,6 @@ const Dashboard = () => {
         <div className="flex items-center gap-3">
           <TestEmailButton />
           <TestSMSButton />
-          <TestNotificationButton />
           <ScheduleNotifications />
           <NotificationSettings />
           <Link to="/upload">
