@@ -45,14 +45,14 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Mobile:', mobileNumber);
     console.log('Schedule days:', scheduleDays);
 
-    // Get current date for comparison (using local timezone)
+    // Get current date for comparison (using UTC)
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     console.log('Current time:', now.toISOString());
-    console.log('Today (local):', today.toISOString());
+    console.log('Today (UTC start):', today.toISOString());
 
-    // Find the next upcoming receipt with due date
+    // Find the next upcoming receipt with due date (including today)
     const { data: upcomingReceipts, error: receiptError } = await supabase
       .from('receipts')
       .select('*')
@@ -101,7 +101,11 @@ const handler = async (req: Request): Promise<Response> => {
     );
     
     console.log('Parsed due date:', dueDate.toISOString());
-    console.log('Due date components:', { year: dueDate.getFullYear(), month: dueDate.getMonth(), day: dueDate.getDate() });
+    console.log('Due date components:', { 
+      year: dueDate.getFullYear(), 
+      month: dueDate.getMonth(), 
+      day: dueDate.getDate() 
+    });
     
     let scheduledCount = 0;
 
@@ -114,16 +118,26 @@ const handler = async (req: Request): Promise<Response> => {
       scheduledSendDate.setDate(scheduledSendDate.getDate() - days);
       
       console.log('Scheduled send date:', scheduledSendDate.toISOString());
-      console.log('Today:', today.toISOString());
-      console.log('Is scheduled date >= today?', scheduledSendDate >= today);
+      console.log('Today start:', today.toISOString());
+      console.log('Is scheduled date >= today start?', scheduledSendDate >= today);
 
-      // Only schedule if the scheduled date is today or in the future
-      if (scheduledSendDate < today) {
-        console.log(`❌ Skipping schedule for ${days} days before - date ${scheduledSendDate.toDateString()} is in the past`);
+      // Modified logic: Allow scheduling if the date is today or in the future
+      // OR if it's in the past but less than 24 hours ago (for immediate sending)
+      const hoursDifference = (today.getTime() - scheduledSendDate.getTime()) / (1000 * 60 * 60);
+      const shouldSchedule = scheduledSendDate >= today || hoursDifference <= 24;
+
+      if (!shouldSchedule) {
+        console.log(`❌ Skipping schedule for ${days} days before - date ${scheduledSendDate.toDateString()} is too far in the past (${hoursDifference.toFixed(1)} hours ago)`);
         continue;
       }
 
-      console.log(`✅ Scheduling for ${days} days before - date ${scheduledSendDate.toDateString()} is valid`);
+      // If the scheduled date is in the past but within 24 hours, schedule for immediate sending
+      const finalScheduledDate = scheduledSendDate < today ? now : scheduledSendDate;
+      
+      console.log(`✅ Scheduling for ${days} days before - using date ${finalScheduledDate.toDateString()}`);
+      if (finalScheduledDate.getTime() === now.getTime()) {
+        console.log('📨 Will be sent immediately (past due date within 24 hours)');
+      }
 
       // Create content for notifications
       const content = {
@@ -149,7 +163,7 @@ const handler = async (req: Request): Promise<Response> => {
             recipient: email,
             due_date: dueDate.toISOString(),
             schedule_days_before: days,
-            scheduled_send_date: scheduledSendDate.toISOString(),
+            scheduled_send_date: finalScheduledDate.toISOString(),
             content: content,
             status: 'scheduled'
           })
@@ -174,7 +188,7 @@ const handler = async (req: Request): Promise<Response> => {
             recipient: mobileNumber,
             due_date: dueDate.toISOString(),
             schedule_days_before: days,
-            scheduled_send_date: scheduledSendDate.toISOString(),
+            scheduled_send_date: finalScheduledDate.toISOString(),
             content: content,
             status: 'scheduled'
           })
