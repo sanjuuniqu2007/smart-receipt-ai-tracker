@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -135,7 +134,6 @@ export function Header() {
             </Link>
             <div className="flex flex-col gap-2 mt-4">
               {user ? <>
-                  <NotificationSettings />
                   <Button variant="outline" className="w-full flex items-center justify-center gap-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50" onClick={() => {
               handleSignOut();
               setIsMenuOpen(false);
