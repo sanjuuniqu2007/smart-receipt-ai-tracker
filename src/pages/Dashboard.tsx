@@ -12,6 +12,11 @@ import { Calendar, DollarSign, FileText, Search, Filter, TrendingUp, MoreVertica
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
+import { UpcomingDueReceipts } from "@/components/notifications/UpcomingDueReceipts";
+import { ReceiptDetailModal } from "@/components/receipts/ReceiptDetailModal";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Receipt, NotificationHistory } from "@/types/database.types";
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TestEmailButton } from "@/components/notifications/TestEmailButton";
@@ -179,6 +184,7 @@ const Dashboard = () => {
           <TestEmailButton />
           <TestSMSButton />
           <ScheduleNotifications />
+          <NotificationSettings />
           <Link to="/upload">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
