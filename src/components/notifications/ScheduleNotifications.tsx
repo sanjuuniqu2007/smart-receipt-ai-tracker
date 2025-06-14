@@ -32,6 +32,32 @@ export function ScheduleNotifications() {
     }
   };
 
+  // MOCK: Trigger the pending notifications function programmatically (was previously user-driven by a button)
+  const triggerPendingNotifications = async () => {
+    setIsProcessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('trigger-notifications', {
+        body: {}
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Pending Notifications Sent",
+        description: `Processed ${data.result?.processedCount || 0} notifications (sent immediately after scheduling)`
+      });
+    } catch (error: any) {
+      console.error('Error triggering notifications:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to send pending notifications"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleScheduleNotifications = async () => {
     if (!mobileNumber.trim()) {
       toast({
@@ -78,6 +104,9 @@ export function ScheduleNotifications() {
         description: `Successfully scheduled ${data.scheduledCount} notifications for the next upcoming receipt`
       });
 
+      // Mock trigger pending notifications immediately after scheduling
+      await triggerPendingNotifications();
+
       // Reset form
       setMobileNumber("");
       setSelectedSchedules([]);
@@ -92,31 +121,6 @@ export function ScheduleNotifications() {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleTriggerNotifications = async () => {
-    setIsProcessing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('trigger-notifications', {
-        body: {}
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Notifications Triggered",
-        description: `Processed ${data.result?.processedCount || 0} notifications successfully`
-      });
-    } catch (error: any) {
-      console.error('Error triggering notifications:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to trigger notifications"
-      });
-    } finally {
-      setIsProcessing(false);
     }
   };
 
