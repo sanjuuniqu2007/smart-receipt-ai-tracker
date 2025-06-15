@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,10 +45,37 @@ const Dashboard = () => {
   const {
     toast
   } = useToast();
+  const [authLoading, setAuthLoading] = useState(true);
+  const navigate = useNavigate();
+
   useEffect(() => {
-    fetchReceipts();
-    fetchNotificationHistory();
-  }, []);
+    let isMounted = true;
+    // Check authentication on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isMounted) {
+        if (!session || !session.user) {
+          navigate("/auth/login", { replace: true });
+        } else {
+          setAuthLoading(false);
+        }
+      }
+    });
+    // Also handle edge case: auth state change events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!session?.user) {
+          navigate("/auth/login", { replace: true });
+        } else {
+          setAuthLoading(false);
+        }
+      }
+    );
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
   const fetchReceipts = async () => {
     setLoading(true);
     try {
@@ -175,7 +203,7 @@ const Dashboard = () => {
     month,
     amount: amount as number
   }));
-  if (loading) {
+  if (authLoading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
   return (
