@@ -55,10 +55,15 @@ const UploadReceipt = () => {
   // Get current user id on component mount
   useEffect(() => {
     const checkUser = async () => {
+      console.log("🔍 Checking user authentication...");
       const { data } = await supabase.auth.getUser();
+      console.log("👤 User data:", data);
+      
       if (data?.user) {
         setUserId(data.user.id);
+        console.log("✅ User authenticated, ID:", data.user.id);
       } else {
+        console.log("❌ No user found, redirecting to login");
         toast({
           title: "Authentication required",
           description: "Please sign in to upload receipts",
@@ -74,6 +79,7 @@ const UploadReceipt = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      console.log("📁 File selected:", file.name, file.type, file.size);
       setSelectedFile(file);
       
       // Create a preview
@@ -91,7 +97,9 @@ const UploadReceipt = () => {
       try {
         // Run OCR processing if file is an image
         if (file.type.startsWith('image/')) {
+          console.log("🔍 Starting OCR processing...");
           const ocrData = await processReceiptImage(file);
+          console.log("✅ OCR data extracted:", ocrData);
           
           setExtractedData({
             vendor: ocrData.vendor || "",
@@ -112,7 +120,7 @@ const UploadReceipt = () => {
           });
         }
       } catch (ocrError) {
-        console.error("OCR processing error:", ocrError);
+        console.error("❌ OCR processing error:", ocrError);
         toast({
           title: "OCR processing error",
           description: "Failed to extract data automatically. Please fill in the details manually.",
@@ -131,7 +139,10 @@ const UploadReceipt = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log("🚀 Starting receipt submission process...");
+    
     if (!selectedFile) {
+      console.log("❌ No file selected");
       toast({
         title: "No file selected",
         description: "Please select a receipt image to upload",
@@ -141,6 +152,7 @@ const UploadReceipt = () => {
     }
 
     if (!userId) {
+      console.log("❌ No user ID found");
       toast({
         title: "Authentication required",
         description: "Please sign in to upload receipts",
@@ -152,6 +164,7 @@ const UploadReceipt = () => {
     
     // Validate required fields
     if (!extractedData.vendor || !extractedData.date) {
+      console.log("❌ Missing required fields:", { vendor: extractedData.vendor, date: extractedData.date });
       toast({
         title: "Missing information",
         description: "Please fill in at least the vendor and receipt date",
@@ -164,39 +177,88 @@ const UploadReceipt = () => {
       setIsSubmitting(true);
       setUploadStatus("uploading");
       
+      console.log("📤 Starting file upload to storage...");
+      
       // Upload the image to Supabase storage
       const timestamp = Date.now();
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `receipt-${timestamp}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
       
+      console.log("📝 Upload details:", { fileName, filePath, fileSize: selectedFile.size });
+      
+      // First, try to create the bucket if it doesn't exist
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      console.log("🪣 Existing buckets:", buckets);
+      
+      if (bucketsError) {
+        console.error("❌ Error checking buckets:", bucketsError);
+      }
+      
+      const receiptsBucketExists = buckets?.some(bucket => bucket.name === 'receipts');
+      console.log("🔍 Receipts bucket exists:", receiptsBucketExists);
+      
+      if (!receiptsBucketExists) {
+        console.log("🆕 Creating receipts bucket...");
+        const { data: createBucketData, error: createBucketError } = await supabase.storage.createBucket('receipts', {
+          public: true,
+          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          fileSizeLimit: 1024 * 1024 * 10 // 10MB
+        });
+        
+        if (createBucketError) {
+          console.error("❌ Error creating bucket:", createBucketError);
+          throw new Error(`Failed to create storage bucket: ${createBucketError.message}`);
+        }
+        
+        console.log("✅ Bucket created successfully:", createBucketData);
+      }
+      
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('receipts')
         .upload(filePath, selectedFile);
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("❌ Storage upload error:", uploadError);
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+      
+      console.log("✅ File uploaded successfully:", uploadData);
       
       // Get the public URL for the uploaded image
       const { data: { publicUrl } } = supabase.storage
         .from('receipts')
         .getPublicUrl(filePath);
       
-      // Save to Supabase database
-      const { error: insertError } = await supabase
-        .from('receipts')
-        .insert({
-          user_id: userId,
-          vendor: extractedData.vendor,
-          amount: parseFloat(extractedData.amount) || 0,
-          receipt_date: extractedData.date,
-          due_date: extractedData.dueDate || null,
-          category: extractedData.category,
-          payment_status: 'pending',
-          image_url: publicUrl,
-          notes: ''
-        });
+      console.log("🔗 Public URL generated:", publicUrl);
       
-      if (insertError) throw insertError;
+      // Prepare the receipt data
+      const receiptData = {
+        user_id: userId,
+        vendor: extractedData.vendor,
+        amount: parseFloat(extractedData.amount) || 0,
+        receipt_date: extractedData.date,
+        due_date: extractedData.dueDate || null,
+        category: extractedData.category,
+        payment_status: 'pending' as const,
+        image_url: publicUrl,
+        notes: ''
+      };
+      
+      console.log("💾 Inserting receipt data:", receiptData);
+      
+      // Save to Supabase database
+      const { error: insertError, data: insertData } = await supabase
+        .from('receipts')
+        .insert(receiptData)
+        .select(); // Add select to get the inserted data back
+      
+      if (insertError) {
+        console.error("❌ Database insert error:", insertError);
+        throw new Error(`Database error: ${insertError.message}`);
+      }
+      
+      console.log("✅ Receipt saved to database:", insertData);
       
       setUploadStatus("success");
       
@@ -207,11 +269,12 @@ const UploadReceipt = () => {
       
       // Redirect after a delay
       setTimeout(() => {
+        console.log("🔄 Redirecting to dashboard...");
         navigate("/dashboard");
       }, 1500);
       
     } catch (error: any) {
-      console.error("Error processing receipt:", error);
+      console.error("💥 Error processing receipt:", error);
       setUploadStatus("error");
       toast({
         title: "Error saving receipt",
