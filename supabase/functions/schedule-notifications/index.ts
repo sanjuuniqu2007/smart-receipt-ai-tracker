@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -111,52 +112,32 @@ const handler = async (req: Request): Promise<Response> => {
     // Schedule notifications for each selected day
     for (const days of scheduleDays) {
       console.log(`\n--- Processing ${days} days before due date ---`);
-
+      
       // Calculate scheduled send date by subtracting days from due date
       const scheduledSendDate = new Date(dueDate);
       scheduledSendDate.setDate(scheduledSendDate.getDate() - days);
+      
+      console.log('Scheduled send date:', scheduledSendDate.toISOString());
+      console.log('Today start:', today.toISOString());
+      console.log('Is scheduled date >= today start?', scheduledSendDate >= today);
 
-      // Compute "today" (UTC, midnight) and "now"
-      const nowTime = now.getTime();
-      const todayTime = today.getTime();
-      const dueDateTime = dueDate.getTime();
-      const scheduledTime = scheduledSendDate.getTime();
-
-      const caseInfo = {
-        now: now.toISOString(),
-        today: today.toISOString(),
-        dueDate: dueDate.toISOString(),
-        scheduledSend: scheduledSendDate.toISOString(),
-      };
-      console.log("Dates comparison snapshot:", caseInfo);
-
-      // If the scheduled date is in the future (today or later), use it
-      let shouldSchedule = false;
-      let finalScheduledDate = scheduledSendDate;
-      let message = "";
-
-      if (scheduledTime >= todayTime) {
-        // Normal scheduling: schedule for calculated date in the future
-        shouldSchedule = true;
-        message = "Scheduling notification for selected date (in future as expected)";
-      } else if (nowTime <= dueDateTime) {
-        // If scheduled send date is before today and due date is still in future or today,
-        // schedule the notification to go out immediately ("catch-up" mode)
-        shouldSchedule = true;
-        finalScheduledDate = now;
-        message = "Scheduled send date is past, but due date is still active - sending immediately";
-      } else {
-        // Scheduled date in past, due date already passed—skip
-        shouldSchedule = false;
-        message = `❌ Skipping schedule for ${days} days before: scheduled date is past and due date also passed`;
-      }
+      // Modified logic: Allow scheduling if the date is today or in the future
+      // OR if it's in the past but less than 24 hours ago (for immediate sending)
+      const hoursDifference = (today.getTime() - scheduledSendDate.getTime()) / (1000 * 60 * 60);
+      const shouldSchedule = scheduledSendDate >= today || hoursDifference <= 24;
 
       if (!shouldSchedule) {
-        console.log(message);
+        console.log(`❌ Skipping schedule for ${days} days before - date ${scheduledSendDate.toDateString()} is too far in the past (${hoursDifference.toFixed(1)} hours ago)`);
         continue;
       }
 
-      console.log(`✅ ${message}. Scheduling for: ${finalScheduledDate.toISOString()}`);
+      // If the scheduled date is in the past but within 24 hours, schedule for immediate sending
+      const finalScheduledDate = scheduledSendDate < today ? now : scheduledSendDate;
+      
+      console.log(`✅ Scheduling for ${days} days before - using date ${finalScheduledDate.toDateString()}`);
+      if (finalScheduledDate.getTime() === now.getTime()) {
+        console.log('📨 Will be sent immediately (past due date within 24 hours)');
+      }
 
       // Create content for notifications
       const content = {
@@ -167,6 +148,8 @@ const handler = async (req: Request): Promise<Response> => {
         dueDate: receipt.due_date,
         daysBefore: days
       };
+
+      console.log('Notification content:', content);
 
       try {
         // Schedule email notification

@@ -24,11 +24,6 @@ export function FAQSection() {
         "You can set reminders for due dates, payment deadlines, or warranty expirations. Notifications can be delivered via email, SMS, or browser push notifications based on your preferences.",
     },
     {
-      question: "Can I export my receipt data?",
-      answer:
-        "Yes, you can export your data in various formats including PDF, CSV, and Excel. This makes it easy to share information with your accountant or import into accounting software.",
-    },
-    {
       question: "Is there a limit to how many receipts I can upload?",
       answer:
         "Our free plan includes storage for up to 50 receipts. Premium plans offer unlimited receipt storage along with additional features like advanced analytics and priority OCR processing.",
