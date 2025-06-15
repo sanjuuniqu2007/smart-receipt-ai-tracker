@@ -207,7 +207,7 @@ export function ScheduleNotifications() {
 
       <Button 
         variant="outline" 
-        onClick={handleTriggerNotifications}
+        onClick={triggerPendingNotifications}
         disabled={isProcessing}
       >
         {isProcessing ? (
