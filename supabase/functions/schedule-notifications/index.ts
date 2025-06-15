@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -117,26 +116,19 @@ const handler = async (req: Request): Promise<Response> => {
       const scheduledSendDate = new Date(dueDate);
       scheduledSendDate.setDate(scheduledSendDate.getDate() - days);
       
-      console.log('Scheduled send date:', scheduledSendDate.toISOString());
-      console.log('Today start:', today.toISOString());
-      console.log('Is scheduled date >= today start?', scheduledSendDate >= today);
+      console.log('Calculated scheduled send date:', scheduledSendDate.toISOString());
+      console.log('Current time:', now.toISOString());
 
-      // Modified logic: Allow scheduling if the date is today or in the future
-      // OR if it's in the past but less than 24 hours ago (for immediate sending)
-      const hoursDifference = (today.getTime() - scheduledSendDate.getTime()) / (1000 * 60 * 60);
-      const shouldSchedule = scheduledSendDate >= today || hoursDifference <= 24;
+      // The initial receipt query ensures we're only processing receipts
+      // with a due_date of today or in the future.
 
-      if (!shouldSchedule) {
-        console.log(`❌ Skipping schedule for ${days} days before - date ${scheduledSendDate.toDateString()} is too far in the past (${hoursDifference.toFixed(1)} hours ago)`);
-        continue;
-      }
-
-      // If the scheduled date is in the past but within 24 hours, schedule for immediate sending
-      const finalScheduledDate = scheduledSendDate < today ? now : scheduledSendDate;
+      // If the calculated notification date is in the past, send it immediately.
+      // Otherwise, schedule it for the calculated future date.
+      const finalScheduledDate = scheduledSendDate < now ? now : scheduledSendDate;
       
-      console.log(`✅ Scheduling for ${days} days before - using date ${finalScheduledDate.toDateString()}`);
+      console.log(`✅ Scheduling notification to be sent at: ${finalScheduledDate.toISOString()}`);
       if (finalScheduledDate.getTime() === now.getTime()) {
-        console.log('📨 Will be sent immediately (past due date within 24 hours)');
+        console.log('📨 This notification will be sent immediately because its calculated send date is in the past.');
       }
 
       // Create content for notifications
