@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -186,33 +185,6 @@ const UploadReceipt = () => {
       const filePath = `${userId}/${fileName}`;
       
       console.log("📝 Upload details:", { fileName, filePath, fileSize: selectedFile.size });
-      
-      // First, try to create the bucket if it doesn't exist
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      console.log("🪣 Existing buckets:", buckets);
-      
-      if (bucketsError) {
-        console.error("❌ Error checking buckets:", bucketsError);
-      }
-      
-      const receiptsBucketExists = buckets?.some(bucket => bucket.name === 'receipts');
-      console.log("🔍 Receipts bucket exists:", receiptsBucketExists);
-      
-      if (!receiptsBucketExists) {
-        console.log("🆕 Creating receipts bucket...");
-        const { data: createBucketData, error: createBucketError } = await supabase.storage.createBucket('receipts', {
-          public: true,
-          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-          fileSizeLimit: 1024 * 1024 * 10 // 10MB
-        });
-        
-        if (createBucketError) {
-          console.error("❌ Error creating bucket:", createBucketError);
-          throw new Error(`Failed to create storage bucket: ${createBucketError.message}`);
-        }
-        
-        console.log("✅ Bucket created successfully:", createBucketData);
-      }
       
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('receipts')
