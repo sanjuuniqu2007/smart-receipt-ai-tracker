@@ -204,6 +204,19 @@ export function ScheduleNotifications() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Button 
+        variant="outline" 
+        onClick={handleTriggerNotifications}
+        disabled={isProcessing}
+      >
+        {isProcessing ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Send className="mr-2 h-4 w-4" />
+        )}
+        Send Pending Notifications
+      </Button>
     </div>
   );
 }
